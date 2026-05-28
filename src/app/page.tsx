@@ -7,7 +7,6 @@ import {
   Settings, 
   Plus, 
   X, 
-  Newspaper,
   TrendingUp,
   Clock,
   FolderPlus,
@@ -771,7 +770,7 @@ export default function Home() {
             </div>
             <div className="flex flex-col">
               <h1 className="text-lg font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
-              <span className="text-[9px] font-black text-accent tracking-[.3em] uppercase opacity-80">Smart News Tracker</span>
+              <span className="text-[9px] font-black text-accent tracking-[.3em] uppercase opacity-80">Smart Signal Tracker</span>
             </div>
           </motion.div>
           
@@ -1115,7 +1114,7 @@ export default function Home() {
             </h2>
             {news.length > 0 && (
               <span className="text-[10px] font-black text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20">
-                {news.length} ARTICLES SCAN RESULT
+                {news.length} SIGNALS DETECTED
               </span>
             )}
           </div>
@@ -1123,7 +1122,7 @@ export default function Home() {
           {!activeGroup ? (
             <div className="py-20 flex flex-col items-center gap-6 text-center">
               <div className="w-24 h-24 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/10 animate-pulse">
-                <Newspaper size={40} className="text-white/10" />
+                <Radar size={40} className="text-white/10" />
               </div>
               <p className="text-sm text-white/30 max-w-[200px] leading-relaxed">Select or create a channel to begin scanning data.</p>
             </div>
@@ -1221,13 +1220,13 @@ export default function Home() {
             </div>
           ) : (
             <div className="py-24 px-8 flex flex-col items-center gap-8 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
-              <Search size={60} strokeWidth={1} className="text-white/10" />
+              <Radar size={60} strokeWidth={1} className="text-white/10" />
               <div className="flex flex-col gap-4 max-w-[280px]">
                 <p className="text-xl font-black tracking-tight uppercase italic">{activeGroup.keywords.length > 0 ? 'Ready to Scan' : 'Pipeline Empty'}</p>
                 <p className="text-xs text-white/40 leading-relaxed font-bold">
                   {activeGroup.keywords.length > 0 
                    ? `Click below to scan for ${activeGroup.name} intelligence.` 
-                   : 'Add keywords to this channel to begin scanning the news database.'}
+                   : 'Add keywords to this channel to begin scanning for signal updates.'}
                 </p>
                 {activeGroup.keywords.length > 0 && (
                   <button 

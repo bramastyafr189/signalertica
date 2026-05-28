@@ -5,8 +5,8 @@ import Script from "next/script";
 const outfit = Outfit({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Signalertica | Smart News Tracker",
-  description: "Stay ahead with real-time news tailored to your interests.",
+  title: "Signalertica | Smart Signal Tracker",
+  description: "Stay ahead with real-time keyword intelligence and custom signal alerting.",
   manifest: "/manifest.json",
   icons: {
     icon: '/icon-192x192.png',
