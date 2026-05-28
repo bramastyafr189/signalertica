@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { 
   Bell, 
   BellOff, 
@@ -206,6 +207,7 @@ function useDragScroll() {
 }
 
 export default function Home() {
+  const { data: session, status } = useSession();
   const [groups, setGroups] = useState<InterestGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<number | null>(null);
   const channelScroll = useDragScroll();
@@ -253,6 +255,7 @@ export default function Home() {
 
   // Initialize logs & channels from DB, then periodic refresh
   useEffect(() => {
+    if (!session) return;
     const init = async () => {
       // 1. Load Logs
       try {
@@ -297,7 +300,7 @@ export default function Home() {
     }, 45000);
 
     return () => clearInterval(syncInterval);
-  }, []);
+  }, [session]);
 
   // Handle Deep Linking from Notifications
   useEffect(() => {
@@ -435,6 +438,7 @@ export default function Home() {
 
   // Load Groups, Keywords, and Global Settings
   const loadData = useCallback(async () => {
+    if (!session) return;
     try {
       // 1. Fetch Interests
       const resp = await fetch('/api/interests');
@@ -455,14 +459,15 @@ export default function Home() {
     } catch (e) {
       console.error('Failed to load data:', e);
     }
-  }, [activeGroupId]);
+  }, [activeGroupId, session]);
 
   useEffect(() => {
+    if (!session) return;
     loadData();
     if ("Notification" in window) {
       setNotificationsAllowed(Notification.permission === "granted");
     }
-  }, [loadData]);
+  }, [loadData, session]);
 
   const toggleGlobalSync = async (enabled: boolean) => {
     setIsGlobalSyncEnabled(enabled);
@@ -745,6 +750,64 @@ export default function Home() {
     }
   };
 
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#050507] flex flex-col items-center justify-center gap-4 text-center">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
+          <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent" />
+        </div>
+        <p className="text-xs font-black text-white/40 tracking-[0.2em] uppercase">Decrypting Credentials...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-[#050507] flex items-center justify-center p-4 overflow-hidden relative">
+        <div className="bg-blob-1" />
+        <div className="bg-blob-2" />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="card-rich p-8 sm:p-12 w-full max-w-[420px] text-center border-accent/20 flex flex-col gap-8 relative z-10"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative group">
+              <div className="absolute -inset-2 bg-accent/20 rounded-2xl blur-xl group-hover:bg-accent/30 transition-all animate-pulse-slow" />
+              <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border border-white/10 glass-light">
+                <img src="/icon-192x192.png" alt="Signalertica Logo" className="w-full h-full object-cover" />
+              </div>
+            </div>
+            <div className="flex flex-col mt-2">
+              <h1 className="text-2xl font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
+              <span className="text-[10px] font-black text-accent tracking-[.3em] uppercase opacity-80 mt-1">Smart Signal Tracker</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-white/40 leading-relaxed max-w-[280px] mx-auto">
+            Access secure keyword surveillance channels, live telemetry sync, and real-time push alerting.
+          </p>
+
+          <button 
+            onClick={() => signIn("google")}
+            className="button-primary py-4 px-6 flex items-center justify-center gap-3 text-xs uppercase tracking-wider font-black shadow-lg shadow-accent/20 hover:shadow-accent/30 w-full"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+            </svg>
+            <span>Authorize Google Access</span>
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <main className="relative z-0 pb-28">
       <div className="bg-blob-1" />
@@ -774,13 +837,35 @@ export default function Home() {
             </div>
           </motion.div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowSettings(!showSettings)}
-              className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white/10 transition-all active:scale-95"
+              className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white/10 transition-all active:scale-95"
             >
-              <LayoutGrid size={20} className="text-white/70" />
+              <LayoutGrid size={18} className="text-white/70" />
             </button>
+            {session && (
+              <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+                {session.user?.image ? (
+                  <img 
+                    src={session.user.image} 
+                    alt={session.user.name || "User"} 
+                    className="w-8 h-8 rounded-xl border border-white/10 object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent uppercase">
+                    {session.user?.name ? session.user.name.slice(0, 2) : "US"}
+                  </div>
+                )}
+                <button 
+                  onClick={() => signOut()}
+                  className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-error/10 hover:text-error hover:border-error/20 transition-all active:scale-95 text-white/50"
+                  title="Deauthorize session"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </motion.nav>

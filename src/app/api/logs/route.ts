@@ -1,15 +1,25 @@
 import { db } from '@/db';
 import { intelligenceLogs, capturedArticles } from '@/db/schema';
-import { desc, eq, gt, sql } from 'drizzle-orm';
+import { desc, eq, gt, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET() {
   try {
-    // Only return logs from the last 24 hours
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only return logs from the last 24 hours for the current user
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     const logs = await db.query.intelligenceLogs.findMany({
-      where: gt(intelligenceLogs.timestamp, twentyFourHoursAgo),
+      where: and(
+        eq(intelligenceLogs.userId, session.user.id),
+        gt(intelligenceLogs.timestamp, twentyFourHoursAgo)
+      ),
       with: {
         articles: true,
       },
@@ -26,14 +36,19 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id, title, body: logBody, channel, timestamp, articles } = body;
+    const logId = id || Math.random().toString(36).substr(2, 9);
 
-    // Use a basic sequential approach if transaction support is uncertain or for simplicity
-    // But LibSQL supports transactions
     await db.transaction(async (tx) => {
       await tx.insert(intelligenceLogs).values({
-        id: id || Math.random().toString(36).substr(2, 9),
+        id: logId,
+        userId: session.user.id,
         title,
         body: logBody,
         channel,
@@ -43,7 +58,7 @@ export async function POST(req: Request) {
       if (articles && articles.length > 0) {
         await tx.insert(capturedArticles).values(
           articles.map((art: any) => ({
-            logId: id,
+            logId: logId,
             title: art.title,
             description: art.description,
             url: art.url,
@@ -63,7 +78,12 @@ export async function POST(req: Request) {
 
 export async function DELETE() {
   try {
-    await db.delete(intelligenceLogs);
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await db.delete(intelligenceLogs).where(eq(intelligenceLogs.userId, session.user.id));
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to clear logs:', error);

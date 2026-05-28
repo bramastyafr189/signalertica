@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Outfit } from "next/font/google";
 import Script from "next/script";
+import { Providers } from "./providers";
 
 const outfit = Outfit({ subsets: ["latin"] });
 
@@ -30,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={outfit.className}>
       <body>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Script
           id="sw-registration"
           strategy="afterInteractive"

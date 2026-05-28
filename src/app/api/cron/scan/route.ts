@@ -60,11 +60,11 @@ export async function GET(req: Request) {
 
       // 2. Only scan if the time elapsed is >= the user-defined interval
       if (diffMinutes < interval) {
-        console.log(`[CRON] Skipping "${channel.name}" (Next scan in ${Math.round(interval - diffMinutes)} mins)`);
+        console.log(`[CRON] Skipping "${channel.name}" for user ${channel.userId} (Next scan in ${Math.round(interval - diffMinutes)} mins)`);
         continue;
       }
 
-      console.log(`[CRON] Scanning "${channel.name}" pipeline...`);
+      console.log(`[CRON] Scanning "${channel.name}" pipeline for user ${channel.userId}...`);
       const keywords = channel.keywords.map(k => k.word);
       const articles = await getNewsOnServer(keywords.join(' OR '), channel.language || 'any');
       
@@ -78,6 +78,7 @@ export async function GET(req: Request) {
         await db.transaction(async (tx) => {
           await tx.insert(intelligenceLogs).values({
             id: logId,
+            userId: channel.userId,
             title: `+${newArticles.length}`,
             body: `Background sync complete for "${channel.name}" pipeline.`,
             channel: channel.name,
@@ -103,7 +104,10 @@ export async function GET(req: Request) {
 
         // c. Trigger Web Push for this channel if notifications enabled
         if (channel.notificationsEnabled) {
-          const subscriptions = await db.query.pushSubscriptions.findMany();
+          // Send ONLY to subscriptions belonging to the channel's owner
+          const subscriptions = await db.query.pushSubscriptions.findMany({
+            where: eq(pushSubscriptions.userId, channel.userId)
+          });
           
           // Construct a "Smart" notification payload
           const count = newArticles.length;
