@@ -33,7 +33,8 @@ import {
   Target,
   Wifi,
   Edit2,
-  MoreVertical
+  MoreVertical,
+  Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchNews, NewsArticle } from "@/lib/news";
@@ -53,9 +54,18 @@ type PushNotificationOptions = NotificationOptions & {
   renotify?: boolean;
   vibrate?: number[];
 };
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
 
 const isActiveTab = (value: string | null): value is ActiveTab => {
   return value === 'home' || value === 'explore' || value === 'account' || value === 'monitor';
+};
+
+const isIosDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
 };
 
 // Helper for professional time formatting
@@ -234,6 +244,8 @@ export default function Home() {
   const [editGroupName, setEditGroupName] = useState("");
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [notificationsAllowed, setNotificationsAllowed] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isStandaloneApp, setIsStandaloneApp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -281,6 +293,33 @@ export default function Home() {
       console.error('Push registration error:', error);
     }
   }, []);
+
+  useEffect(() => {
+    const standaloneQuery = window.matchMedia('(display-mode: standalone)');
+    const updateStandaloneState = () => {
+      setIsStandaloneApp(standaloneQuery.matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
+    };
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const handleAppInstalled = () => {
+      setDeferredInstallPrompt(null);
+      setIsStandaloneApp(true);
+      showToast("App installed", "success");
+    };
+
+    updateStandaloneState();
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    standaloneQuery.addEventListener('change', updateStandaloneState);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      standaloneQuery.removeEventListener('change', updateStandaloneState);
+    };
+  }, [showToast]);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -538,6 +577,23 @@ export default function Home() {
     } else {
       alert("Please allow notifications first!");
     }
+  };
+
+  const installApp = async () => {
+    if (isStandaloneApp) {
+      showToast("App already installed", "info");
+      return;
+    }
+
+    if (deferredInstallPrompt) {
+      await deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      setDeferredInstallPrompt(null);
+      showToast(choice.outcome === 'accepted' ? "Install started" : "Install dismissed", choice.outcome === 'accepted' ? "success" : "info");
+      return;
+    }
+
+    showToast(isIosDevice() ? "Use Share, then Add to Home Screen" : "Install prompt not available yet", "info");
   };
 
   const handleFetch = async (keywords: string[], lang?: string | null, country?: string | null, groupId?: number) => {
@@ -1650,6 +1706,23 @@ export default function Home() {
               >
                 {/* Column 1: Alerts & Sync */}
                 <div className="flex flex-col gap-4">
+                  <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-xl ${isStandaloneApp ? 'bg-accent-secondary/20 text-accent-secondary' : 'bg-white/5 text-white/50'}`}>
+                          <Download size={18} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm tracking-tight text-white/90">INSTALL APP</span>
+                          <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{isStandaloneApp ? 'Installed' : deferredInstallPrompt ? 'Ready' : 'Available'}</span>
+                        </div>
+                      </div>
+                      <button onClick={installApp} className="text-accent text-[10px] font-black uppercase tracking-wider bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled={isStandaloneApp}>
+                        {isStandaloneApp ? 'Done' : 'Install'}
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
