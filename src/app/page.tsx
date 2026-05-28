@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+/* eslint-disable @next/next/no-img-element */
+
+import { useState, useEffect, useCallback, useRef, type MouseEvent } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { 
   Bell, 
@@ -8,9 +10,7 @@ import {
   Settings, 
   Plus, 
   X, 
-  TrendingUp,
   Clock,
-  FolderPlus,
   Trash2,
   ChevronRight,
   Hash,
@@ -21,10 +21,7 @@ import {
   RefreshCcw,
   Volume2,
   Home as HomeIcon,
-  Compass,
-  User,
   ChevronDown,
-  Calendar,
   Radio,
   Satellite,
   Terminal,
@@ -49,6 +46,17 @@ interface AppNotification {
   timestamp: string;
   articles?: NewsArticle[];
 }
+
+type ActiveTab = 'home' | 'explore' | 'account' | 'monitor';
+type PushNotificationOptions = NotificationOptions & {
+  badge?: string;
+  renotify?: boolean;
+  vibrate?: number[];
+};
+
+const isActiveTab = (value: string | null): value is ActiveTab => {
+  return value === 'home' || value === 'explore' || value === 'account' || value === 'monitor';
+};
 
 // Helper for professional time formatting
 const formatTime = (dateStr: string) => {
@@ -81,14 +89,15 @@ const triggerNotification = async (title: string, body: string) => {
   if (Notification.permission === "granted") {
     try {
       const registration = await navigator.serviceWorker.ready;
-      registration.showNotification(title, {
+      const options: PushNotificationOptions = {
         body,
         icon: '/icon-192x192.png',
         badge: '/icon-192x192.png',
         vibrate: [100, 50, 100],
         tag: 'intelligence-report',
         renotify: true
-      } as any);
+      };
+      registration.showNotification(title, options);
     } catch (e) {
       console.error("SW notification failed, falling back", e);
       new Notification(title, { body, icon: '/icon-192x192.png' });
@@ -180,38 +189,36 @@ function useDragScroll() {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  const onMouseDown = (e: React.MouseEvent) => {
+  const onMouseDown = useCallback((e: MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
     setIsDragging(true);
     setStartX(e.pageX - ref.current.offsetLeft);
     setScrollLeft(ref.current.scrollLeft);
-  };
-  const onMouseLeave = () => setIsDragging(false);
-  const onMouseUp = () => setIsDragging(false);
-  const onMouseMove = (e: React.MouseEvent) => {
+  }, []);
+
+  const onMouseLeave = useCallback(() => setIsDragging(false), []);
+  const onMouseUp = useCallback(() => setIsDragging(false), []);
+  const onMouseMove = useCallback((e: MouseEvent<HTMLDivElement>) => {
     if (!isDragging || !ref.current) return;
     e.preventDefault();
     const x = e.pageX - ref.current.offsetLeft;
     const walk = (x - startX) * 2;
     ref.current.scrollLeft = scrollLeft - walk;
-  };
+  }, [isDragging, scrollLeft, startX]);
 
-  return {
+  return [
     ref,
-    onMouseDown,
-    onMouseLeave,
-    onMouseUp,
-    onMouseMove,
-    className: `overflow-x-auto scrollbar-hide ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`,
-  };
+    `overflow-x-auto scrollbar-hide ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`,
+    { onMouseDown, onMouseLeave, onMouseUp, onMouseMove },
+  ] as const;
 }
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [groups, setGroups] = useState<InterestGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<number | null>(null);
-  const channelScroll = useDragScroll();
-  const filterScroll = useDragScroll();
+  const [channelScrollRef, channelScrollClassName, channelScrollHandlers] = useDragScroll();
+  const [filterScrollRef, filterScrollClassName, filterScrollHandlers] = useDragScroll();
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupLang, setNewGroupLang] = useState("any");
   const [newKeyword, setNewKeyword] = useState("");
@@ -219,13 +226,61 @@ export default function Home() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [historyLogs, setHistoryLogs] = useState<AppNotification[]>([]);
-  const [tickerTime, setTickerTime] = useState(Date.now());
+  const [tickerTime, setTickerTime] = useState(0);
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
   const [logChannelFilter, setLogChannelFilter] = useState<string>("all");
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isRenamingGroupId, setIsRenamingGroupId] = useState<number | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [notificationsAllowed, setNotificationsAllowed] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<number | null>(null);
+  const [keywordToDelete, setKeywordToDelete] = useState<{ id: number; word: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('home');
+  const [isGlobalSyncEnabled, setIsGlobalSyncEnabled] = useState(true);
+  const [canManageGlobalSync, setCanManageGlobalSync] = useState(false);
+  const [isScanningAtId, setIsScanningAtId] = useState<number | null>(null);
+  const isScanning = isScanningAtId !== null;
+  const [selectedLog, setSelectedLog] = useState<AppNotification | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const groupsRef = useRef<InterestGroup[]>([]);
+  const modalHistoryRef = useRef(false);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const subscribeToPushNotifications = useCallback(async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!publicKey) return;
+
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+      }
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+      
+      console.log('Push subscription established successfully.');
+    } catch (error) {
+      console.error('Push registration error:', error);
+    }
+  }, []);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -281,7 +336,7 @@ export default function Home() {
 
       // 3. Re-register Push if permission is already handled
       if (Notification.permission === 'granted') {
-        subscribeToPushNotifications();
+        void subscribeToPushNotifications();
       }
     };
     init();
@@ -295,35 +350,39 @@ export default function Home() {
             const data = await res.json();
             setGroups(data);
           }
-        } catch (e) {}
+        } catch {
+          // Best-effort UI state sync.
+        }
       }
     }, 45000);
 
     return () => clearInterval(syncInterval);
-  }, [session]);
+  }, [activeTab, session, subscribeToPushNotifications]);
 
   // Handle Deep Linking from Notifications
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const targetTab = params.get('tab');
-    const logId = params.get('logId');
+    queueMicrotask(() => {
+      const params = new URLSearchParams(window.location.search);
+      const targetTab = params.get('tab');
+      const logId = params.get('logId');
 
-    if (targetTab === 'account' || targetTab === 'home' || targetTab === 'explore') {
-      setActiveTab(targetTab as any);
+      if (isActiveTab(targetTab)) {
+        setActiveTab(targetTab);
 
-      // If we have a logId and we are in the account tab, try to find and open the log
-      if (targetTab === 'account' && logId && historyLogs.length > 0) {
-        const log = historyLogs.find(l => l.id === logId);
-        if (log) {
-          setSelectedLog(log);
-          // Clean up URL to keep it pretty
+        // If we have a logId and we are in the account tab, try to find and open the log
+        if (targetTab === 'account' && logId && historyLogs.length > 0) {
+          const log = historyLogs.find(l => l.id === logId);
+          if (log) {
+            setSelectedLog(log);
+            // Clean up URL to keep it pretty
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } else if (!logId) {
+          // Just tab change, clean up
           window.history.replaceState({}, document.title, window.location.pathname);
         }
-      } else if (!logId) {
-        // Just tab change, clean up
-        window.history.replaceState({}, document.title, window.location.pathname);
       }
-    }
+    });
   }, [historyLogs]); // Re-run when logs are loaded to handle the logId deep link
 
   // Real-time ticker for countdown precision
@@ -334,41 +393,18 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  
-  const [notificationsAllowed, setNotificationsAllowed] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [groupToDelete, setGroupToDelete] = useState<number | null>(null);
-  const [keywordToDelete, setKeywordToDelete] = useState<{ id: number; word: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'account' | 'monitor'>('home');
-  const [isGlobalSyncEnabled, setIsGlobalSyncEnabled] = useState(true);
-  const [isScanningAtId, setIsScanningAtId] = useState<number | null>(null);
-  const [isScanning, setIsScanning] = useState(false); // Global scanning status flag
-
-  const [selectedLog, setSelectedLog] = useState<AppNotification | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
-  const groupsRef = useRef<InterestGroup[]>([]);
-  const modalHistoryRef = useRef(false);
+  const isAnyModalOpen = !!(
+    selectedLog || 
+    showSettings || 
+    isCreatingGroup || 
+    showClearLogsModal || 
+    isRenamingGroupId ||
+    groupToDelete ||
+    keywordToDelete
+  );
 
   // Sync modal state with browser history for "back-to-close" behavior
   useEffect(() => {
-    const isAnyModalOpen = !!(
-      selectedLog || 
-      showSettings || 
-      isCreatingGroup || 
-      showClearLogsModal || 
-      isRenamingGroupId ||
-      groupToDelete ||
-      keywordToDelete
-    );
-
     if (isAnyModalOpen && !modalHistoryRef.current) {
       window.history.pushState({ modalOpen: true }, "");
       modalHistoryRef.current = true;
@@ -379,15 +415,7 @@ export default function Home() {
         window.history.back();
       }
     }
-  }, [
-    !!selectedLog, 
-    showSettings, 
-    isCreatingGroup, 
-    showClearLogsModal, 
-    !!isRenamingGroupId,
-    !!groupToDelete,
-    !!keywordToDelete
-  ]);
+  }, [isAnyModalOpen]);
 
   // Global popstate listener to catch the hardware/browser back button
   useEffect(() => {
@@ -413,29 +441,6 @@ export default function Home() {
     groupsRef.current = groups;
   }, [groups]);
 
-  // Handle deep-linking from notifications (?tab=account&logId=XYZ)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    const logId = params.get('logId');
-
-    if (tab === 'account') {
-      setActiveTab('account');
-    }
-
-    if (logId && historyLogs.length > 0) {
-      const log = historyLogs.find(l => l.id === logId);
-      if (log) {
-        setSelectedLog(log);
-        // Clean up URL to prevent re-opening on manual refresh
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      }
-    }
-  }, [historyLogs.length]);
-
   // Load Groups, Keywords, and Global Settings
   const loadData = useCallback(async () => {
     if (!session) return;
@@ -452,8 +457,18 @@ export default function Home() {
 
       // 2. Fetch Global Settings
       const setResp = await fetch('/api/settings');
+      if (setResp.status === 403) {
+        setCanManageGlobalSync(false);
+        return;
+      }
+
+      if (!setResp.ok) {
+        throw new Error(`Settings fetch failed: ${setResp.status}`);
+      }
+
       const setData = await setResp.json();
-      if (setData && typeof setData.isSyncEnabled === 'boolean') {
+      if (typeof setData.isSyncEnabled === 'boolean') {
+        setCanManageGlobalSync(true);
         setIsGlobalSyncEnabled(setData.isSyncEnabled);
       }
     } catch (e) {
@@ -463,22 +478,39 @@ export default function Home() {
 
   useEffect(() => {
     if (!session) return;
-    loadData();
-    if ("Notification" in window) {
-      setNotificationsAllowed(Notification.permission === "granted");
-    }
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      void loadData();
+      if ("Notification" in window) {
+        setNotificationsAllowed(Notification.permission === "granted");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadData, session]);
 
   const toggleGlobalSync = async (enabled: boolean) => {
+    if (!canManageGlobalSync) {
+      showToast("Admin access required for pipeline sync", "info");
+      return;
+    }
+
     setIsGlobalSyncEnabled(enabled);
     try {
-      await fetch('/api/settings', {
+      const response = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isSyncEnabled: enabled })
       });
+      if (!response.ok) {
+        throw new Error(`Settings update failed: ${response.status}`);
+      }
       showToast(enabled ? "Global monitoring activated" : "Global monitoring suspended", enabled ? "success" : "info");
-    } catch (e) {
+    } catch {
       showToast("Failed to sync system status", "error");
       setIsGlobalSyncEnabled(!enabled); // Rollback
     }
@@ -487,37 +519,6 @@ export default function Home() {
   const activeGroup = groups.find(g => g.id === activeGroupId);
   const uniqueSources = Array.from(new Set(news.map(n => n.source))).filter(Boolean).sort();
   const filteredNews = sourceFilter === "all" ? news : news.filter(n => n.source === sourceFilter);
-
-  const subscribeToPushNotifications = async () => {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Get the existing subscription
-      let subscription = await registration.pushManager.getSubscription();
-      
-      if (!subscription) {
-        // Subscribe the user
-        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!publicKey) return;
-
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
-        });
-      }
-
-      // Send the subscription to your server
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription)
-      });
-      
-      console.log('Push subscription established successfully.');
-    } catch (error) {
-      console.error('Push registration error:', error);
-    }
-  };
 
   const requestNotificationPermission = async () => {
     if (!("Notification" in window)) return;
@@ -565,7 +566,7 @@ export default function Home() {
         // Create log entry for intelligence persistence
         if (newArticles.length > 0) {
           const newLog = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             title: `+${newArticles.length}`,
             body: `Sync complete for "${targetGroup?.name || 'Channel'}" pipeline.`,
             channel: targetGroup?.name || 'Unknown',
@@ -887,12 +888,9 @@ export default function Home() {
           </div>
 
           <div 
-            className={`flex gap-3 pb-2 -mx-1 px-1 ${channelScroll.className}`}
-            ref={channelScroll.ref}
-            onMouseDown={channelScroll.onMouseDown}
-            onMouseLeave={channelScroll.onMouseLeave}
-            onMouseUp={channelScroll.onMouseUp}
-            onMouseMove={channelScroll.onMouseMove}
+            className={`flex gap-3 pb-2 -mx-1 px-1 ${channelScrollClassName}`}
+            ref={channelScrollRef}
+            {...channelScrollHandlers}
           >
             {groups.map(group => (
               <motion.button
@@ -1230,12 +1228,9 @@ export default function Home() {
             <div className="flex flex-col gap-6">
               {uniqueSources.length > 1 && (
                 <div 
-                  className={`flex items-center gap-3 pb-2 -mx-1 px-1 ${filterScroll.className}`}
-                  ref={filterScroll.ref}
-                  onMouseDown={filterScroll.onMouseDown}
-                  onMouseLeave={filterScroll.onMouseLeave}
-                  onMouseUp={filterScroll.onMouseUp}
-                  onMouseMove={filterScroll.onMouseMove}
+                  className={`flex items-center gap-3 pb-2 -mx-1 px-1 ${filterScrollClassName}`}
+                  ref={filterScrollRef}
+                  {...filterScrollHandlers}
                 >
                  <button 
                    onClick={() => setSourceFilter("all")} 
@@ -1682,14 +1677,17 @@ export default function Home() {
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black text-sm tracking-tight text-white/90">PIPELINE SYNC</span>
-                          <span className={`text-[9px] font-bold uppercase tracking-widest ${isGlobalSyncEnabled ? 'text-accent' : 'text-white/20'}`}>
-                             {isGlobalSyncEnabled ? (isScanning ? 'Synchronizing Intelligence...' : 'Active') : 'Standby'}
+                          <span className={`text-[9px] font-bold uppercase tracking-widest ${canManageGlobalSync && isGlobalSyncEnabled ? 'text-accent' : 'text-white/20'}`}>
+                             {!canManageGlobalSync ? 'Admin Only' : isGlobalSyncEnabled ? (isScanning ? 'Synchronizing Intelligence...' : 'Active') : 'Standby'}
                           </span>
                         </div>
                       </div>
                       <button 
                         onClick={() => toggleGlobalSync(!isGlobalSyncEnabled)}
-                        className={`w-12 h-7 rounded-full relative transition-all duration-300 ${isGlobalSyncEnabled ? 'bg-accent/40 border-accent/20' : 'bg-white/5 border-white/5'} border`}
+                        disabled={!canManageGlobalSync}
+                        aria-disabled={!canManageGlobalSync}
+                        title={canManageGlobalSync ? 'Toggle global pipeline sync' : 'Admin access required'}
+                        className={`w-12 h-7 rounded-full relative transition-all duration-300 ${isGlobalSyncEnabled ? 'bg-accent/40 border-accent/20' : 'bg-white/5 border-white/5'} border ${canManageGlobalSync ? '' : 'opacity-40 cursor-not-allowed'}`}
                       >
                          <motion.div 
                            animate={{ x: isGlobalSyncEnabled ? 22 : 4 }}
@@ -1773,7 +1771,7 @@ export default function Home() {
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Destroy Channel?</h3>
                 <p className="text-sm text-white/40 leading-relaxed">
-                  Are you sure you want to delete <span className="text-white font-bold break-all">"{groups.find(g => g.id === groupToDelete)?.name}"</span>? This action is irreversible.
+                  Are you sure you want to delete <span className="text-white font-bold break-all">&quot;{groups.find(g => g.id === groupToDelete)?.name}&quot;</span>? This action is irreversible.
                 </p>
               </div>
 
@@ -1817,7 +1815,7 @@ export default function Home() {
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Destroy Keyword?</h3>
                 <p className="text-sm text-white/40 leading-relaxed">
-                  Are you sure you want to remove <span className="text-white font-bold break-all">"{keywordToDelete.word.toUpperCase()}"</span>? This target will no longer be tracked.
+                  Are you sure you want to remove <span className="text-white font-bold break-all">&quot;{keywordToDelete.word.toUpperCase()}&quot;</span>? This target will no longer be tracked.
                 </p>
               </div>
 

@@ -4,20 +4,37 @@ import { getNewsOnServer } from '@/lib/news-fetcher';
 import { eq, lte } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
+import { rateLimitByRequest } from '@/lib/rate-limit';
 
-// Configure VAPID keys
-webpush.setVapidDetails(
-  'mailto:bramastya@example.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(
+    'mailto:bramastya@example.com',
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+}
+
+function getWebPushStatusCode(error: unknown) {
+  if (typeof error === 'object' && error !== null && 'statusCode' in error) {
+    const statusCode = (error as { statusCode?: unknown }).statusCode;
+    return typeof statusCode === 'number' ? statusCode : null;
+  }
+  return null;
+}
 
 export async function GET(req: Request) {
   // Security check for Vercel Cron
   const authHeader = req.headers.get('Authorization');
-  if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (process.env.NODE_ENV === 'production' && (!cronSecret || authHeader !== `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const rateLimited = rateLimitByRequest(req, 'cron:scan', 12, 60_000, authHeader || undefined);
+  if (rateLimited) return rateLimited;
 
   console.log('[CRON] Starting global intelligence scan...');
   
@@ -66,13 +83,13 @@ export async function GET(req: Request) {
 
       console.log(`[CRON] Scanning "${channel.name}" pipeline for user ${channel.userId}...`);
       const keywords = channel.keywords.map(k => k.word);
-      const articles = await getNewsOnServer(keywords.join(' OR '), channel.language || 'any');
+      const articles = await getNewsOnServer(keywords.join(' OR '), channel.language || 'any', channel.country || 'any');
       
       const newArticles = articles.filter(a => new Date(a.publishedAt) > lastScanAt);
 
       if (newArticles.length > 0) {
         totalNewArticles += newArticles.length;
-        const logId = Math.random().toString(36).substr(2, 9);
+        const logId = crypto.randomUUID();
 
         // a. Save to Intelligence Logs
         await db.transaction(async (tx) => {
@@ -90,6 +107,7 @@ export async function GET(req: Request) {
               logId: logId,
               title: art.title,
               description: art.description,
+              image: art.image,
               url: art.url,
               source: art.source,
               publishedAt: art.publishedAt,
@@ -103,7 +121,7 @@ export async function GET(req: Request) {
         });
 
         // c. Trigger Web Push for this channel if notifications enabled
-        if (channel.notificationsEnabled) {
+        if (channel.notificationsEnabled && vapidPublicKey && vapidPrivateKey) {
           // Send ONLY to subscriptions belonging to the channel's owner
           const subscriptions = await db.query.pushSubscriptions.findMany({
             where: eq(pushSubscriptions.userId, channel.userId)
@@ -111,7 +129,7 @@ export async function GET(req: Request) {
           
           // Construct a "Smart" notification payload
           const count = newArticles.length;
-          let notificationTitle = `${channel.name}: ${count} ${count === 1 ? 'Target Acquired' : 'Targets Detected'}`;
+          const notificationTitle = `${channel.name}: ${count} ${count === 1 ? 'Target Acquired' : 'Targets Detected'}`;
           let notificationBody = "";
 
           if (count === 1) {
@@ -150,8 +168,9 @@ export async function GET(req: Request) {
                 },
                 payload
               );
-            } catch (error: any) {
-              if (error.statusCode === 410 || error.statusCode === 404) {
+            } catch (error: unknown) {
+              const statusCode = getWebPushStatusCode(error);
+              if (statusCode === 410 || statusCode === 404) {
                 // Subscription has expired or is no longer valid
                 await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
               }

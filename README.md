@@ -89,11 +89,13 @@ Fill in the parameters:
   ```
   Paste the generated public and private keys into `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`.
 * **Cron Secret:** Set a custom secure string for `CRON_SECRET` to protect production sync calls.
+* **Admin Emails:** Set `ADMIN_EMAILS` to a comma-separated list of Google account emails that may change global sync settings.
+* **Production Auth:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, and `CRON_SECRET` must be real, secret production values.
 
-### 3. Database Push/Migration
-Initialize your database tables by pushing the schema definitions:
+### 3. Database Migration
+Initialize or upgrade your database using the checked-in Drizzle migrations:
 ```bash
-npx drizzle-kit push
+npx drizzle-kit migrate
 ```
 
 ### 4. Running the App

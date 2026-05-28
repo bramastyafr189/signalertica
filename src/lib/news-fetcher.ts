@@ -7,21 +7,37 @@ const parser = new Parser({
   }
 });
 
-// Mapping for standard languages to Google News specific hl/gl/ceid combo
-const langMap: Record<string, string> = {
-  'en': 'hl=en-US&gl=US&ceid=US:en',
-  'id': 'hl=id&gl=ID&ceid=ID:id',
-  'ja': 'hl=ja&gl=JP&ceid=JP:ja',
-  'ar': 'hl=ar&gl=AE&ceid=AE:ar',
+const languageDefaults: Record<string, { hl: string; gl: string; ceidLang: string }> = {
+  any: { hl: 'en-US', gl: 'US', ceidLang: 'en' },
+  en: { hl: 'en-US', gl: 'US', ceidLang: 'en' },
+  id: { hl: 'id', gl: 'ID', ceidLang: 'id' },
+  ja: { hl: 'ja', gl: 'JP', ceidLang: 'ja' },
+  ar: { hl: 'ar', gl: 'AE', ceidLang: 'ar' },
+  zh: { hl: 'zh-CN', gl: 'CN', ceidLang: 'zh-Hans' },
+  fr: { hl: 'fr', gl: 'FR', ceidLang: 'fr' },
+  de: { hl: 'de', gl: 'DE', ceidLang: 'de' },
+  es: { hl: 'es', gl: 'ES', ceidLang: 'es' },
+  ko: { hl: 'ko', gl: 'KR', ceidLang: 'ko' },
 };
 
-export async function getNewsOnServer(q: string, lang = 'any') {
-  const geoParams = langMap[lang] || langMap['en'];
+const supportedCountries = new Set(['AE', 'CN', 'DE', 'ES', 'FR', 'ID', 'JP', 'KR', 'US']);
+
+function getGoogleNewsLocale(lang = 'any', country = 'any') {
+  const locale = languageDefaults[lang] || languageDefaults.any;
+  const gl = country !== 'any' && supportedCountries.has(country.toUpperCase())
+    ? country.toUpperCase()
+    : locale.gl;
+
+  return `hl=${locale.hl}&gl=${gl}&ceid=${gl}:${locale.ceidLang}`;
+}
+
+export async function getNewsOnServer(q: string, lang = 'any', country = 'any') {
+  const geoParams = getGoogleNewsLocale(lang, country);
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&${geoParams}`;
 
   const feed = await parser.parseURL(rssUrl);
 
-  let articles = feed.items.slice(0, 50).map((item, index) => {
+  const articles = feed.items.slice(0, 50).map((item, index) => {
     const fullTitle = decode(item.title || '');
     const title = fullTitle.includes(' - ') ? fullTitle.split(' - ').slice(0, -1).join(' - ') : fullTitle;
     
@@ -47,8 +63,8 @@ export async function getNewsOnServer(q: string, lang = 'any') {
 
     // Extract source name correctly
     let sourceName = 'Google Intelligence';
-    if (item.source) {
-      sourceName = item.source as string;
+    if (typeof item.source === 'string') {
+      sourceName = item.source;
     } else if (fullTitle.includes(' - ')) {
       const parts = fullTitle.split(' - ');
       sourceName = parts.pop() || sourceName;

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -80,12 +80,20 @@ export const interests = sqliteTable('interests', {
   notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' }).default(false),
   lastScanAt: integer('last_scan_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => {
+  return {
+    userNameUnique: uniqueIndex('interests_user_name_unique').on(table.userId, table.name),
+  };
 });
 
 export const keywords = sqliteTable('keywords', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   interestId: integer('interest_id').notNull().references(() => interests.id, { onDelete: 'cascade' }),
   word: text('word').notNull(),
+}, (table) => {
+  return {
+    interestWordUnique: uniqueIndex('keywords_interest_word_unique').on(table.interestId, table.word),
+  };
 });
 
 export const pushSubscriptions = sqliteTable('push_subscriptions', {
@@ -95,6 +103,10 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
   p256dh: text('p256dh').notNull(),
   auth: text('auth').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => {
+  return {
+    endpointUnique: uniqueIndex('push_subscriptions_endpoint_unique').on(table.endpoint),
+  };
 });
 
 export const systemSettings = sqliteTable('system_settings', {
