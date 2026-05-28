@@ -8,7 +8,7 @@ export default {
   schema: './src/db/schema.ts',
   out: './drizzle',
   dbCredentials: {
-    url: process.env.TURSO_CONNECTION_URL || 'file:newspulse.db',
+    url: process.env.TURSO_CONNECTION_URL || 'file:signalertica.db',
     authToken: process.env.TURSO_AUTH_TOKEN,
   },
 } as Config;

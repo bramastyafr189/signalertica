@@ -1,6 +1,6 @@
 {
-  "name": "NewsPulse",
-  "short_name": "NewsPulse",
+  "name": "Signalertica",
+  "short_name": "Signalertica",
   "description": "Smart keyword-based news tracker",
   "start_url": "/",
   "display": "standalone",

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  allowedDevOrigins: ['newspulse.test'],
+  allowedDevOrigins: ['signalertica.test'],
 };
 
 export default nextConfig;

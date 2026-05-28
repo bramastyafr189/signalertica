@@ -766,11 +766,11 @@ export default function Home() {
             <div className="relative group">
               <div className="absolute -inset-1 bg-accent/20 rounded-xl blur-md group-hover:bg-accent/30 transition-all animate-pulse-slow" />
               <div className="relative w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 glass-light">
-                <img src="/icon-192x192.png" alt="NewsPulse Logo" className="w-full h-full object-cover" />
+                <img src="/icon-192x192.png" alt="Signalertica Logo" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-lg font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">NEWSPULSE</h1>
+              <h1 className="text-lg font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
               <span className="text-[9px] font-black text-accent tracking-[.3em] uppercase opacity-80">Smart News Tracker</span>
             </div>
           </motion.div>
@@ -1034,7 +1034,7 @@ export default function Home() {
                   >
                     <Settings size={16} className="text-accent mt-0.5" />
                     <p className="text-[10px] font-bold text-accent/80 leading-relaxed uppercase tracking-wider">
-                      Note: Alerts are enabled but Interval is Manual. NewsPulse will only notify you when you trigger a manual scan.
+                      Note: Alerts are enabled but Interval is Manual. Signalertica will only notify you when you trigger a manual scan.
                     </p>
                   </motion.div>
                 )}

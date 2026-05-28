@@ -3,7 +3,7 @@ import { createClient } from '@libsql/client';
 import * as schema from './schema';
 
 const client = createClient({
-  url: process.env.TURSO_CONNECTION_URL || 'file:newspulse.db',
+  url: process.env.TURSO_CONNECTION_URL || 'file:signalertica.db',
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
