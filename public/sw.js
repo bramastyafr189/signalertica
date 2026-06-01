@@ -1,4 +1,4 @@
-const CACHE_NAME = 'signalertica-v4'; // Increment version to bust old cache
+const CACHE_NAME = 'signalertica-v5'; // Increment version to bust old cache
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -60,27 +60,6 @@ self.addEventListener('push', (event) => {
       self.registration.showNotification(data.title, options)
     );
   }
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data?.type !== 'SHOW_NOTIFICATION') return;
-
-  const { title, options } = event.data.payload || {};
-  if (!title) {
-    event.ports?.[0]?.postMessage({ success: false });
-    return;
-  }
-
-  event.waitUntil(
-    self.registration.showNotification(title, options || {})
-      .then(() => {
-        event.ports?.[0]?.postMessage({ success: true });
-      })
-      .catch((error) => {
-        console.error('Failed to show notification from message:', error);
-        event.ports?.[0]?.postMessage({ success: false });
-      })
-  );
 });
 
 // Handle notification clicks

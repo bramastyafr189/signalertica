@@ -58,13 +58,6 @@ type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
-type ServiceWorkerNotificationMessage = {
-  type: 'SHOW_NOTIFICATION';
-  payload: {
-    title: string;
-    options: PushNotificationOptions;
-  };
-};
 
 const isActiveTab = (value: string | null): value is ActiveTab => {
   return value === 'home' || value === 'explore' || value === 'account' || value === 'monitor';
@@ -74,39 +67,6 @@ const isIosDevice = () => {
   if (typeof navigator === 'undefined') return false;
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 };
-
-function waitForServiceWorkerReady() {
-  return Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<never>((_, reject) => {
-      window.setTimeout(() => reject(new Error('Service worker was not ready in time')), 8000);
-    }),
-  ]);
-}
-
-function showNotificationViaServiceWorker(registration: ServiceWorkerRegistration, title: string, options: PushNotificationOptions) {
-  return new Promise<boolean>((resolve) => {
-    if (!registration.active) {
-      resolve(false);
-      return;
-    }
-
-    const channel = new MessageChannel();
-    const timeout = window.setTimeout(() => resolve(false), 5000);
-
-    channel.port1.onmessage = (event) => {
-      window.clearTimeout(timeout);
-      resolve(Boolean(event.data?.success));
-    };
-
-    const message: ServiceWorkerNotificationMessage = {
-      type: 'SHOW_NOTIFICATION',
-      payload: { title, options },
-    };
-
-    registration.active.postMessage(message, [channel.port2]);
-  });
-}
 
 // Helper for professional time formatting
 const formatTime = (dateStr: string) => {
@@ -149,19 +109,13 @@ const triggerNotification = async (title: string, body: string) => {
     icon: '/icon-192x192.png',
     badge: '/icon-192x192.png',
     vibrate: [100, 50, 100],
-    tag: `intelligence-test-${Date.now()}`,
-    renotify: true,
-    data: {
-      url: '/'
-    }
+    tag: 'intelligence-report',
+    renotify: true
   };
 
   try {
-    const registration = await waitForServiceWorkerReady();
-    const shownByWorker = await showNotificationViaServiceWorker(registration, title, options);
-    if (!shownByWorker) {
-      await registration.showNotification(title, options);
-    }
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification(title, options);
   } catch (e) {
     console.error("SW notification failed, falling back", e);
     new Notification(title, { body, icon: '/icon-192x192.png' });
