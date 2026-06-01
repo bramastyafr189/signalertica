@@ -47,6 +47,7 @@ export default function RootLayout({
                     // Listen for updates
                     registration.onupdatefound = () => {
                       const newWorker = registration.installing;
+                      if (!newWorker) return;
                       newWorker.onstatechange = () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                           // New version available!
