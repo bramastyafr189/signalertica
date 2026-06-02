@@ -979,7 +979,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="card-rich p-8 sm:p-12 w-full max-w-[420px] text-center border-accent/20 flex flex-col gap-8 relative z-10"
+          className="card-rich p-8 w-full max-w-[420px] text-center border-accent/20 flex flex-col gap-8 relative z-10"
         >
           <div className="flex flex-col items-center gap-4">
             <div className="relative group">
@@ -1016,7 +1016,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative z-0 pb-28">
+    <main className="app-shell relative z-0 pb-28">
       <div className="bg-blob-1" />
       <div className="bg-blob-2" />
       {/* Premium Navigation */}
@@ -1024,7 +1024,7 @@ export default function Home() {
         initial={{ y: 0 }}
         animate={{ y: isNavVisible ? 0 : "-100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="glass fixed top-0 left-0 right-0 z-50 px-4 py-2"
+        className="glass phone-fixed fixed top-0 z-50 px-4 py-2"
       >
         <div className="nav-container mx-auto">
           <motion.div 
@@ -1079,7 +1079,7 @@ export default function Home() {
 
       {/* Main Content Areas */}
       {activeTab === 'home' && (
-        <div className="pt-20 px-4 sm:px-6 w-full max-w-[720px] mx-auto flex flex-col gap-4 fade-in">
+        <div className="pt-20 px-4 w-full max-w-[430px] mx-auto flex flex-col gap-4 fade-in">
         
         {/* Horizontal Channel Bar */}
         <section className="flex flex-col gap-3">
@@ -1134,9 +1134,9 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.9, y: -20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                className="card-rich p-4 sm:p-6 border-accent/20"
+                className="card-rich p-4 border-accent/20"
               >
-                <div className="flex flex-col gap-4 sm:gap-6">
+                <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-white/40">New Channel</h3>
                     <X size={18} className="text-white/20 cursor-pointer hover:text-white" onClick={() => setIsCreatingGroup(false)} />
@@ -1181,7 +1181,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col gap-4"
           >
-            <div className="card-rich p-4 sm:p-6 relative overflow-hidden group">
+            <div className="card-rich p-4 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
                 {(() => {
                     const IconObj = getChannelIcon(activeGroup.name);
@@ -1189,7 +1189,7 @@ export default function Home() {
                 })()}
               </div>
               
-              <div className="relative z-10 flex flex-col gap-4 sm:gap-6">
+              <div className="relative z-10 flex flex-col gap-4">
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1199,7 +1199,7 @@ export default function Home() {
                         <span>{LANGUAGES.find(l => l.code === (activeGroup.language || 'any'))?.name}</span>
                       </div>
                     </div>
-                    <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter italic break-words leading-tight">{activeGroup.name}</h3>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter italic break-words leading-tight">{activeGroup.name}</h3>
                   </div>
                   <div className="relative flex-shrink-0">
                     <button 
@@ -1254,7 +1254,7 @@ export default function Home() {
                 </div>
 
                 {/* Per-Channel Automation Settings */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-[28px] border border-white/5">
+                <div className="grid grid-cols-1 gap-4 bg-white/5 p-4 rounded-[28px] border border-white/5">
                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Auto Alerts</span>
@@ -1270,7 +1270,7 @@ export default function Home() {
                          />
                       </button>
                    </div>
-                   <div className="flex items-center justify-between sm:border-l sm:border-white/10 sm:pl-6">
+                   <div className="flex items-center justify-between ">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Interval</span>
                         <span className="text-xs font-bold text-white uppercase">
@@ -1327,7 +1327,7 @@ export default function Home() {
                   </motion.div>
                 )}
 
-                <div className="flex flex-col gap-4 sm:gap-6">
+                <div className="flex flex-col gap-4">
                   <div className="flex gap-3">
                     <input 
                       type="text" 
@@ -1360,7 +1360,7 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-white/5 gap-4 ${
+                <div className={`flex flex-col items-stretch justify-between border-t border-white/5 gap-4 ${
                   activeGroup.keywords.length > 0 ? 'pt-5 mt-0' : 'pt-4 mt-0'
                 }`}>
                   <div className="flex items-center gap-4">
@@ -1467,7 +1467,7 @@ export default function Home() {
                     delay: Math.min(i * 0.03, 0.3),
                     ease: "easeOut"
                   }}
-                  className="card-rich group cursor-pointer p-4 sm:p-6 flex gap-4 sm:gap-6 items-start relative overflow-hidden pr-8 sm:pr-14"
+                  className="card-rich group cursor-pointer p-4 flex gap-4 items-start relative overflow-hidden pr-8"
                   onClick={() => window.open(article.url, '_blank')}
                 >
                   <div className="flex-1 flex flex-col gap-2 min-w-0 z-10">
@@ -1477,14 +1477,14 @@ export default function Home() {
                        <span className="w-1 h-1 rounded-full bg-white/20" />
                        <span className="text-white/80">{article.source}</span>
                     </div>
-                    <h3 className="text-[17px] sm:text-base font-black leading-[1.2] tracking-tight group-hover:text-accent transition-colors">{article.title}</h3>
+                    <h3 className="text-[17px] font-black leading-[1.2] tracking-tight group-hover:text-accent transition-colors">{article.title}</h3>
                     {article.description && (
-                      <p className="text-xs sm:text-sm text-white/50 line-clamp-2 leading-relaxed">{article.description}</p>
+                      <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">{article.description}</p>
                     )}
                   </div>
                   
                   {article.image && (
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 z-10 hidden sm:block">
+                    <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 z-10 hidden">
                       <img 
                         src={article.image} 
                         loading="lazy"
@@ -1530,7 +1530,7 @@ export default function Home() {
       )}
 
       {activeTab === 'explore' && (
-        <div className="pt-20 px-4 sm:px-6 w-full max-w-[720px] mx-auto flex flex-col gap-4 fade-in pb-20">
+        <div className="pt-20 px-4 w-full max-w-[430px] mx-auto flex flex-col gap-4 fade-in pb-20">
           <div className="flex items-center justify-between px-2">
             <div className="flex flex-col">
               <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Intelligence Monitor</h2>
@@ -1648,7 +1648,7 @@ export default function Home() {
       )}
 
       {activeTab === 'account' && (
-        <div className="pt-20 px-4 sm:px-6 w-full max-w-[720px] mx-auto flex flex-col gap-4 fade-in pb-20">
+        <div className="pt-20 px-4 w-full max-w-[430px] mx-auto flex flex-col gap-4 fade-in pb-20">
           <div className="flex items-center justify-between px-2">
             <div className="flex flex-col">
               <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Intelligence Logs</h2>
@@ -1719,7 +1719,7 @@ export default function Home() {
                   transition={{ duration: 0.3, delay: Math.min(idx * 0.05, 0.2) }}
                   key={log.id}
                   onClick={() => setSelectedLog(log)}
-                  className="card-rich p-4 sm:p-6 flex flex-col gap-4 sm:gap-6 group border border-white/5 relative overflow-hidden cursor-pointer hover:bg-white/[0.04] active:scale-[0.98] transition-all"
+                  className="card-rich p-4 flex flex-col gap-4 group border border-white/5 relative overflow-hidden cursor-pointer hover:bg-white/[0.04] active:scale-[0.98] transition-all"
                 >
                   <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                     {(() => {
@@ -1777,9 +1777,9 @@ export default function Home() {
         initial={{ y: 0 }}
         animate={{ y: isNavVisible ? 0 : "100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="fixed bottom-0 left-0 right-0 z-40 bg-[#050507]/90 backdrop-blur-3xl border-t border-white/10 pb-safe pb-3 sm:pb-4 pt-3 px-6 flex items-center justify-center"
+        className="phone-fixed fixed bottom-0 z-40 bg-[#050507]/90 backdrop-blur-3xl border-t border-white/10 pb-safe pb-3 pt-3 px-6 flex items-center justify-center"
       >
-        <div className="flex items-center gap-10 sm:gap-20">
+        <div className="flex items-center gap-10">
            <button 
              onClick={() => setActiveTab('home')}
              className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'home' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
@@ -1811,7 +1811,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-end justify-center p-0"
+            className="phone-fixed fixed inset-y-0 z-[60] bg-black/80 backdrop-blur-md flex items-end justify-center p-0"
             onClick={() => setShowSettings(false)}
           >
             <motion.div 
@@ -1828,16 +1828,16 @@ export default function Home() {
                   setShowSettings(false);
                 }
               }}
-              className="bg-[#0a0a0c] w-full max-w-2xl rounded-t-[48px] border border-white/10 border-b-0 flex flex-col shadow-2xl"
+              className="bg-[#0a0a0c] w-full max-w-[430px] rounded-t-[48px] border border-white/10 border-b-0 flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               {/* Draggable Handle and Header Area */}
-              <div className="pt-4 sm:pt-6 pb-3 px-6 sm:px-8 flex-shrink-0 cursor-grab active:cursor-grabbing w-full flex flex-col gap-3 rounded-t-[48px]">
+              <div className="pt-4 pb-3 px-6 flex-shrink-0 cursor-grab active:cursor-grabbing w-full flex flex-col gap-3 rounded-t-[48px]">
                 <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto flex-shrink-0" />
                 <div className="flex items-center justify-between flex-shrink-0">
                   <div className="flex flex-col cursor-default">
                     <h3 className="text-2xl font-black italic uppercase tracking-tighter">System Config</h3>
-                    <p className="text-xs text-white/30 hidden sm:block">Application control panel</p>
+                    <p className="text-xs text-white/30 hidden">Application control panel</p>
                   </div>
                   <button 
                     onClick={() => setShowSettings(false)} 
@@ -1851,7 +1851,7 @@ export default function Home() {
 
               {/* Scrollable Content Area (Excluded from Drag) */}
               <div 
-                className="px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col sm:grid sm:grid-cols-2 gap-4 flex-1 max-h-[70vh] overflow-y-auto no-scrollbar"
+                className="px-4 pb-4 flex flex-col gap-4 flex-1 max-h-[70vh] overflow-y-auto no-scrollbar"
                 onPointerDownCapture={e => e.stopPropagation()}
               >
                 {/* Column 1: Alerts & Sync */}
@@ -2205,7 +2205,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className={`fixed bottom-24 sm:bottom-10 left-1/2 -translate-x-1/2 z-[250] px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center gap-3 ${
+            className={`phone-fixed fixed bottom-24 z-[250] mx-4 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center gap-3 ${
               toast.type === 'success' ? 'bg-accent/20 border-accent/40 text-accent' : 
               toast.type === 'error' ? 'bg-error/20 border-error/40 text-error' : 
               'bg-white/10 border-white/20 text-white'
@@ -2222,14 +2222,14 @@ export default function Home() {
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
              exit={{ opacity: 0 }}
-             className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 sm:p-10"
+             className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
              onClick={() => setSelectedLog(null)}
           >
              <motion.div 
                initial={{ scale: 0.9, opacity: 0, y: 20 }}
                animate={{ scale: 1, opacity: 1, y: 0 }}
                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-               className="bg-[#0a0a0c] w-full max-w-2xl max-h-[80vh] rounded-[48px] border border-white/10 flex flex-col shadow-2xl overflow-hidden"
+               className="bg-[#0a0a0c] w-full max-w-[430px] max-h-[80vh] rounded-[48px] border border-white/10 flex flex-col shadow-2xl overflow-hidden"
                onClick={e => e.stopPropagation()}
              >
                 <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">

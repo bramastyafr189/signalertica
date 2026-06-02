@@ -2,6 +2,7 @@
 
 :root {
   /* Premium Midnight Palette */
+  --app-mobile-width: 430px;
   --background: #0a0b14; /* Deep Midnight Navy */
   --foreground: #ffffff;
   --accent: hsl(250, 100%, 70%);
@@ -43,7 +44,9 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
   position: relative;
+  overflow-x: hidden;
 }
 
 main {
@@ -52,6 +55,21 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.app-shell {
+  width: min(100vw, var(--app-mobile-width));
+  max-width: var(--app-mobile-width);
+  min-height: 100dvh;
+  margin-inline: auto;
+  overflow-x: hidden;
+  background: #050507;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 32px 120px rgba(0,0,0,0.45);
+}
+
+.phone-fixed {
+  left: max(0px, calc((100vw - var(--app-mobile-width)) / 2));
+  right: max(0px, calc((100vw - var(--app-mobile-width)) / 2));
 }
 
 /* Atmospheric Background Effects */
@@ -120,7 +138,7 @@ main {
 
 .nav-container {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--app-mobile-width);
   display: flex;
   align-items: center;
   justify-content: space-between;
