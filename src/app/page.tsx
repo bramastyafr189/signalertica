@@ -10,6 +10,7 @@ import {
   Settings, 
   Plus, 
   X, 
+  Check,
   Clock,
   Trash2,
   ChevronRight,
@@ -271,6 +272,7 @@ export default function Home() {
   const [historyLogs, setHistoryLogs] = useState<AppNotification[]>([]);
   const [tickerTime, setTickerTime] = useState(0);
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [logChannelFilter, setLogChannelFilter] = useState<string>("all");
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isRenamingGroupId, setIsRenamingGroupId] = useState<number | null>(null);
@@ -514,6 +516,7 @@ export default function Home() {
     showSettings || 
     isCreatingGroup || 
     showClearLogsModal || 
+    showLogoutModal ||
     isRenamingGroupId ||
     groupToDelete ||
     keywordToDelete
@@ -1065,7 +1068,7 @@ export default function Home() {
                   </div>
                 )}
                 <button 
-                  onClick={() => signOut()}
+                  onClick={() => setShowLogoutModal(true)}
                   className="aspect-square w-8 shrink-0 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-error/10 hover:text-error hover:border-error/20 transition-all active:scale-95 text-white/50"
                   title="Deauthorize session"
                 >
@@ -1828,7 +1831,7 @@ export default function Home() {
                   setShowSettings(false);
                 }
               }}
-              className="bg-[#0a0a0c] w-full max-w-[430px] rounded-t-[48px] border border-white/10 border-b-0 flex flex-col shadow-2xl"
+              className="bg-[#0a0a0c] w-full max-w-[430px] max-h-[calc(100dvh-72px)] rounded-t-[48px] border border-white/10 border-b-0 flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               {/* Draggable Handle and Header Area */}
@@ -1851,7 +1854,7 @@ export default function Home() {
 
               {/* Scrollable Content Area (Excluded from Drag) */}
               <div 
-                className="px-4 pb-4 flex flex-col gap-4 flex-1 max-h-[70vh] overflow-y-auto no-scrollbar"
+                className="px-4 pb-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto no-scrollbar"
                 onPointerDownCapture={e => e.stopPropagation()}
               >
                 {/* Column 1: Alerts & Sync */}
@@ -1895,9 +1898,24 @@ export default function Home() {
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             {notificationChecks.map((check) => (
-                              <div key={check.label} className="flex items-center justify-between rounded-lg bg-black/20 border border-white/5 px-2.5 py-2">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-white/35">{check.label}</span>
-                                <span className={`h-2 w-2 rounded-full ${check.ok ? 'bg-accent shadow-[0_0_8px_var(--accent)]' : 'bg-white/15'}`} />
+                              <div
+                                key={check.label}
+                                className={`flex items-center justify-between rounded-lg border px-2.5 py-2 ${
+                                  check.ok
+                                    ? 'bg-accent/10 border-accent/30 text-white'
+                                    : 'bg-black/20 border-white/5 text-white/30'
+                                }`}
+                              >
+                                <span className="text-[9px] font-bold uppercase tracking-widest">{check.label}</span>
+                                <span
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                    check.ok
+                                      ? 'bg-accent text-white border-accent shadow-[0_0_12px_var(--accent)]'
+                                      : 'bg-white/5 text-white/35 border-white/10'
+                                  }`}
+                                >
+                                  {check.ok ? <Check size={12} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -1971,13 +1989,13 @@ export default function Home() {
                   <div className="flex flex-col gap-2">
                       <button 
                         onClick={() => toggleAllNotifications(true)}
-                        className="w-full bg-accent/10 border border-accent/20 text-accent text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-accent hover:text-white transition-all uppercase tracking-widest"
+                        className="w-full bg-white/5 border border-white/20 text-white/80 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-accent/15 hover:border-accent/40 hover:text-accent transition-all uppercase tracking-widest"
                       >
                          <Bell size={14} /> Enable All
                       </button>
                       <button 
                          onClick={() => toggleAllNotifications(false)}
-                         className="w-full bg-white/5 border border-white/10 text-white/50 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-error/20 hover:text-error transition-all uppercase tracking-widest"
+                         className="w-full bg-white/5 border border-white/20 text-white/80 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-error/15 hover:border-error/40 hover:text-error transition-all uppercase tracking-widest"
                       >
                          <BellOff size={14} /> Silence All
                       </button>
@@ -1985,7 +2003,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="p-6 pt-0 flex-shrink-0">
+              <div className="flex-shrink-0 border-t border-white/5 bg-[#0a0a0c] px-6 pb-6 pt-4">
                 <button 
                   onClick={() => setShowSettings(false)} 
                   className="button-primary py-3 text-sm font-black uppercase italic tracking-tighter w-full"
@@ -1998,6 +2016,53 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+            onClick={() => setShowLogoutModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-error/20 p-8 flex flex-col gap-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-20 h-20 rounded-[32px] bg-error/10 flex items-center justify-center border border-error/20 mx-auto">
+                <X size={40} className="text-error" />
+              </div>
+              
+              <div className="flex flex-col gap-2 text-center">
+                <h3 className="text-xl font-black uppercase italic tracking-tighter">Logout?</h3>
+                <p className="text-sm text-white/40 leading-relaxed">
+                  End this Signalertica session and return to the access screen.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <button 
+                  onClick={() => setShowLogoutModal(false)}
+                  className="py-4 rounded-2xl bg-white/5 text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => signOut()}
+                  className="py-4 rounded-2xl bg-error text-white text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-error/20"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Premium Delete Confirmation Modal */}
       <AnimatePresence>
@@ -2205,13 +2270,13 @@ export default function Home() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className={`phone-fixed fixed bottom-24 z-[250] mx-4 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center gap-3 ${
+            className={`fixed bottom-24 left-1/2 z-[250] w-fit max-w-[calc(100vw-48px)] -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center justify-center gap-3 text-center ${
               toast.type === 'success' ? 'bg-accent/20 border-accent/40 text-accent' : 
               toast.type === 'error' ? 'bg-error/20 border-error/40 text-error' : 
               'bg-white/10 border-white/20 text-white'
             }`}
           >
-            <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+            <span className="whitespace-nowrap text-xs font-black uppercase tracking-widest">{toast.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
