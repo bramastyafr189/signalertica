@@ -1024,49 +1024,49 @@ export default function Home() {
         initial={{ y: 0 }}
         animate={{ y: isNavVisible ? 0 : "-100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="glass phone-fixed fixed top-0 z-50 px-4 py-2"
+        className="glass phone-fixed fixed top-0 z-50 px-3 py-2"
       >
         <div className="nav-container mx-auto">
           <motion.div 
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            className="flex items-center gap-3"
+            className="flex min-w-0 items-center gap-2.5"
           >
-            <div className="relative group">
+            <div className="relative group shrink-0">
               <div className="absolute -inset-1 bg-accent/20 rounded-xl blur-md group-hover:bg-accent/30 transition-all animate-pulse-slow" />
-              <div className="relative w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 glass-light">
+              <div className="relative w-9 h-9 shrink-0 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 glass-light">
                 <img src="/icon-192x192.png" alt="Signalertica Logo" className="w-full h-full object-cover" />
               </div>
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-lg font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
-              <span className="text-[9px] font-black text-accent tracking-[.3em] uppercase opacity-80">Smart Signal Tracker</span>
+            <div className="flex min-w-0 flex-col">
+              <h1 className="whitespace-nowrap text-[18px] font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
+              <span className="whitespace-nowrap text-[8px] font-black text-accent tracking-[.16em] uppercase opacity-80">Smart Signal Tracker</span>
             </div>
           </motion.div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <button 
               onClick={() => setShowSettings(!showSettings)}
-              className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white/10 transition-all active:scale-95"
+              className="aspect-square w-9 shrink-0 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white/10 transition-all active:scale-95"
             >
               <LayoutGrid size={18} className="text-white/70" />
             </button>
             {session && (
-              <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+              <div className="flex shrink-0 items-center gap-2 pl-2 border-l border-white/10">
                 {session.user?.image ? (
                   <img 
                     src={session.user.image} 
                     alt={session.user.name || "User"} 
-                    className="w-8 h-8 rounded-xl border border-white/10 object-cover"
+                    className="aspect-square w-8 shrink-0 rounded-xl border border-white/10 object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent uppercase">
+                  <div className="aspect-square w-8 shrink-0 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent uppercase">
                     {session.user?.name ? session.user.name.slice(0, 2) : "US"}
                   </div>
                 )}
                 <button 
                   onClick={() => signOut()}
-                  className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-error/10 hover:text-error hover:border-error/20 transition-all active:scale-95 text-white/50"
+                  className="aspect-square w-8 shrink-0 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-error/10 hover:text-error hover:border-error/20 transition-all active:scale-95 text-white/50"
                   title="Deauthorize session"
                 >
                   <X size={16} />
