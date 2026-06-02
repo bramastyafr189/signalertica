@@ -58,6 +58,14 @@ type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
+type NotificationDiagnostics = {
+  supported: boolean;
+  serviceWorkerSupported: boolean;
+  pushSupported: boolean;
+  permission: NotificationPermission | 'unsupported';
+  serviceWorkerReady: boolean;
+  pushSubscribed: boolean;
+};
 
 const isActiveTab = (value: string | null): value is ActiveTab => {
   return value === 'home' || value === 'explore' || value === 'account' || value === 'monitor';
@@ -67,6 +75,15 @@ const isIosDevice = () => {
   if (typeof navigator === 'undefined') return false;
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 };
+
+function getServiceWorkerReady(timeoutMs = 8000) {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error('Service worker was not ready in time')), timeoutMs);
+    }),
+  ]);
+}
 
 // Helper for professional time formatting
 const formatTime = (dateStr: string) => {
@@ -114,7 +131,7 @@ const triggerNotification = async (title: string, body: string) => {
   };
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await getServiceWorkerReady();
     await registration.showNotification(title, options);
   } catch (e) {
     console.error("SW notification failed, falling back", e);
@@ -250,7 +267,15 @@ export default function Home() {
   const [isRenamingGroupId, setIsRenamingGroupId] = useState<number | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [showActionMenu, setShowActionMenu] = useState(false);
-  const [notificationsAllowed, setNotificationsAllowed] = useState(false);
+  const [notificationDiagnostics, setNotificationDiagnostics] = useState<NotificationDiagnostics>({
+    supported: false,
+    serviceWorkerSupported: false,
+    pushSupported: false,
+    permission: 'unsupported',
+    serviceWorkerReady: false,
+    pushSubscribed: false,
+  });
+  const [isNotificationBusy, setIsNotificationBusy] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandaloneApp, setIsStandaloneApp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -274,14 +299,45 @@ export default function Home() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  const refreshNotificationDiagnostics = useCallback(async () => {
+    const supported = "Notification" in window;
+    const serviceWorkerSupported = "serviceWorker" in navigator;
+    const pushSupported = serviceWorkerSupported && "PushManager" in window;
+    const diagnostics: NotificationDiagnostics = {
+      supported,
+      serviceWorkerSupported,
+      pushSupported,
+      permission: supported ? Notification.permission : 'unsupported',
+      serviceWorkerReady: false,
+      pushSubscribed: false,
+    };
+
+    if (serviceWorkerSupported) {
+      try {
+        const registration = await getServiceWorkerReady(4000);
+        diagnostics.serviceWorkerReady = Boolean(registration.active);
+        if (pushSupported) {
+          diagnostics.pushSubscribed = Boolean(await registration.pushManager.getSubscription());
+        }
+      } catch {
+        diagnostics.serviceWorkerReady = false;
+      }
+    }
+
+    setNotificationDiagnostics(diagnostics);
+    return diagnostics;
+  }, []);
+
   const subscribeToPushNotifications = useCallback(async () => {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+
+      const registration = await getServiceWorkerReady();
       let subscription = await registration.pushManager.getSubscription();
       
       if (!subscription) {
         const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!publicKey) return;
+        if (!publicKey) return false;
 
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
@@ -296,10 +352,14 @@ export default function Home() {
       });
       
       console.log('Push subscription established successfully.');
+      await refreshNotificationDiagnostics();
+      return true;
     } catch (error) {
       console.error('Push registration error:', error);
+      await refreshNotificationDiagnostics();
+      return false;
     }
-  }, []);
+  }, [refreshNotificationDiagnostics]);
 
   useEffect(() => {
     const standaloneQuery = window.matchMedia('(display-mode: standalone)');
@@ -313,6 +373,7 @@ export default function Home() {
     const handleAppInstalled = () => {
       setDeferredInstallPrompt(null);
       setIsStandaloneApp(true);
+      void refreshNotificationDiagnostics();
       showToast("App installed", "success");
     };
 
@@ -326,7 +387,7 @@ export default function Home() {
       window.removeEventListener('appinstalled', handleAppInstalled);
       standaloneQuery.removeEventListener('change', updateStandaloneState);
     };
-  }, [showToast]);
+  }, [refreshNotificationDiagnostics, showToast]);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -381,7 +442,7 @@ export default function Home() {
       }
 
       // 3. Re-register Push if permission is already handled
-      if (Notification.permission === 'granted') {
+      if ("Notification" in window && Notification.permission === 'granted') {
         void subscribeToPushNotifications();
       }
     };
@@ -529,15 +590,13 @@ export default function Home() {
     queueMicrotask(() => {
       if (cancelled) return;
       void loadData();
-      if ("Notification" in window) {
-        setNotificationsAllowed(Notification.permission === "granted");
-      }
+      void refreshNotificationDiagnostics();
     });
 
     return () => {
       cancelled = true;
     };
-  }, [loadData, session]);
+  }, [loadData, refreshNotificationDiagnostics, session]);
 
   const toggleGlobalSync = async (enabled: boolean) => {
     if (!canManageGlobalSync) {
@@ -565,31 +624,100 @@ export default function Home() {
   const activeGroup = groups.find(g => g.id === activeGroupId);
   const uniqueSources = Array.from(new Set(news.map(n => n.source))).filter(Boolean).sort();
   const filteredNews = sourceFilter === "all" ? news : news.filter(n => n.source === sourceFilter);
+  const notificationHealthy = notificationDiagnostics.supported
+    && notificationDiagnostics.serviceWorkerSupported
+    && notificationDiagnostics.serviceWorkerReady
+    && notificationDiagnostics.permission === "granted";
+  const notificationStatusLabel = !notificationDiagnostics.supported
+    ? "Unsupported"
+    : notificationDiagnostics.permission === "denied"
+      ? "Blocked"
+      : notificationHealthy
+        ? "Ready"
+        : notificationDiagnostics.permission === "default"
+          ? "Setup Required"
+          : "Check Device";
+  const notificationChecks = [
+    { label: "Browser", ok: notificationDiagnostics.supported },
+    { label: "Service Worker", ok: notificationDiagnostics.serviceWorkerSupported && notificationDiagnostics.serviceWorkerReady },
+    { label: "Permission", ok: notificationDiagnostics.permission === "granted" },
+    { label: "Push", ok: notificationDiagnostics.pushSupported && notificationDiagnostics.pushSubscribed },
+  ];
 
   const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) return;
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      await subscribeToPushNotifications();
-      setNotificationsAllowed(true);
+    if (!("Notification" in window)) {
+      showToast("Notifications are not supported on this browser", "error");
+      await refreshNotificationDiagnostics();
+      return false;
+    }
+
+    setIsNotificationBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        showToast(permission === 'denied' ? "Notifications are blocked in browser settings" : "Notification permission was not enabled", "error");
+        await refreshNotificationDiagnostics();
+        return false;
+      }
+
+      const subscribed = await subscribeToPushNotifications();
+      showToast(subscribed ? "Alerts enabled" : "Notifications enabled, push sync pending", subscribed ? "success" : "info");
+      await refreshNotificationDiagnostics();
+      return true;
+    } finally {
+      setIsNotificationBusy(false);
     }
   };
 
   const testNotification = async () => {
-    if (Notification.permission === "granted") {
-      try {
-        await triggerNotification(
-          "Intelligence Report: Target Acquired", 
-          "Encrypted signal established. Real-time surveillance protocols are active."
-        );
-        showToast("Test notification sent", "success");
-      } catch (error) {
-        console.error("Test notification failed:", error);
-        showToast("Notification test failed. Reopen app or reinstall PWA.", "error");
-      }
-    } else {
-      alert("Please allow notifications first!");
+    if (!("Notification" in window)) {
+      showToast("Notifications are not supported on this browser", "error");
+      await refreshNotificationDiagnostics();
+      return false;
     }
+
+    if (Notification.permission !== "granted") {
+      showToast("Enable notifications first", "info");
+      await refreshNotificationDiagnostics();
+      return false;
+    }
+
+    setIsNotificationBusy(true);
+    try {
+      await triggerNotification(
+        "Intelligence Report: Target Acquired", 
+        "Encrypted signal established. Real-time surveillance protocols are active."
+      );
+      showToast("Test notification sent", "success");
+      await refreshNotificationDiagnostics();
+      return true;
+    } catch (error) {
+      console.error("Test notification failed:", error);
+      showToast("Notification test failed. Check device notification settings.", "error");
+      await refreshNotificationDiagnostics();
+      return false;
+    } finally {
+      setIsNotificationBusy(false);
+    }
+  };
+
+  const setupAndTestNotifications = async () => {
+    if (isNotificationBusy) return;
+
+    if (!("Notification" in window)) {
+      showToast("Notifications are not supported on this browser", "error");
+      await refreshNotificationDiagnostics();
+      return;
+    }
+
+    if (Notification.permission !== "granted") {
+      const enabled = await requestNotificationPermission();
+      if (!enabled) return;
+    } else {
+      await subscribeToPushNotifications();
+    }
+
+    await testNotification();
   };
 
   const installApp = async () => {
@@ -1737,20 +1865,47 @@ export default function Home() {
                   </div>
 
                   <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <div className={`p-3 rounded-xl ${notificationsAllowed ? 'bg-accent/20 text-accent' : 'bg-white/5 text-muted'}`}>
-                              {notificationsAllowed ? <Bell size={18} /> : <BellOff size={18} />}
+                      <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                  <div className={`p-3 rounded-xl ${notificationHealthy ? 'bg-accent/20 text-accent' : 'bg-white/5 text-muted'}`}>
+                                    {notificationHealthy ? <Bell size={18} /> : <BellOff size={18} />}
+                                  </div>
+                                  <div className="flex min-w-0 flex-col">
+                                    <span className="font-black text-sm tracking-tight text-white/90">ALERTS</span>
+                                    <span className={`text-[9px] font-bold uppercase tracking-widest ${notificationHealthy ? 'text-accent' : 'text-white/40'}`}>{notificationStatusLabel}</span>
+                                  </div>
                               </div>
-                              <div className="flex flex-col">
-                              <span className="font-black text-sm tracking-tight text-white/90">ALERTS</span>
-                              <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{notificationsAllowed ? 'Active' : 'Blocked'}</span>
-                              </div>
+                              <button
+                                onClick={setupAndTestNotifications}
+                                disabled={isNotificationBusy}
+                                className="shrink-0 text-accent text-[10px] font-black uppercase tracking-wider bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white disabled:opacity-40 disabled:cursor-wait transition-all"
+                              >
+                                {isNotificationBusy ? 'Checking' : notificationHealthy ? 'Test' : 'Setup'}
+                              </button>
                           </div>
-                          {!notificationsAllowed ? (
-                              <button onClick={requestNotificationPermission} className="text-accent text-[10px] font-black uppercase tracking-wider bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white transition-all">Fix</button>
-                          ) : (
-                              <button onClick={testNotification} className="text-accent text-[10px] font-black uppercase tracking-wider bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white transition-all">Test</button>
+                          <div className="grid grid-cols-2 gap-2">
+                            {notificationChecks.map((check) => (
+                              <div key={check.label} className="flex items-center justify-between rounded-lg bg-black/20 border border-white/5 px-2.5 py-2">
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-white/35">{check.label}</span>
+                                <span className={`h-2 w-2 rounded-full ${check.ok ? 'bg-accent shadow-[0_0_8px_var(--accent)]' : 'bg-white/15'}`} />
+                              </div>
+                            ))}
+                          </div>
+                          {(!isStandaloneApp || notificationDiagnostics.permission === 'denied') && (
+                            <div className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-black/20 px-3 py-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">
+                                {notificationDiagnostics.permission === 'denied' ? 'Enable in device settings' : 'PWA improves mobile alerts'}
+                              </span>
+                              {!isStandaloneApp && (
+                                <button
+                                  onClick={installApp}
+                                  className="shrink-0 text-white/70 text-[9px] font-black uppercase tracking-widest bg-white/5 px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-all"
+                                >
+                                  Install
+                                </button>
+                              )}
+                            </div>
                           )}
                       </div>
                   </div>
