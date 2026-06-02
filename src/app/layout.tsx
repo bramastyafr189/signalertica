@@ -40,7 +40,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
+                function registerServiceWorker() {
                   navigator.serviceWorker.register('/sw.js').then(function(registration) {
                     console.log('ServiceWorker registration successful');
                     
@@ -56,9 +56,15 @@ export default function RootLayout({
                       };
                     };
                   }, function(err) {
-                    console.log('ServiceWorker registration failed');
+                    console.log('ServiceWorker registration failed', err);
                   });
-                });
+                }
+
+                if (document.readyState === 'complete') {
+                  registerServiceWorker();
+                } else {
+                  window.addEventListener('load', registerServiceWorker, { once: true });
+                }
 
                 // Refresh the page once the new service worker has taken control
                 let refreshing = false;

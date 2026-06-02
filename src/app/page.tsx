@@ -76,7 +76,16 @@ const isIosDevice = () => {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 };
 
-function getServiceWorkerReady(timeoutMs = 8000) {
+async function getServiceWorkerReady(timeoutMs = 8000) {
+  if (!("serviceWorker" in navigator)) {
+    throw new Error('Service workers are not supported by this browser');
+  }
+
+  const existingRegistration = await navigator.serviceWorker.getRegistration('/');
+  if (!existingRegistration) {
+    await navigator.serviceWorker.register('/sw.js');
+  }
+
   return Promise.race([
     navigator.serviceWorker.ready,
     new Promise<never>((_, reject) => {

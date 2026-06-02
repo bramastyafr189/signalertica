@@ -1,4 +1,4 @@
-const CACHE_NAME = 'signalertica-v5'; // Increment version to bust old cache
+const CACHE_NAME = 'signalertica-v6'; // Increment version to bust old cache
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
