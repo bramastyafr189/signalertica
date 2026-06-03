@@ -1,5 +1,13 @@
 import { db } from '@/db';
-import { interests, intelligenceLogs, capturedArticles, pushSubscriptions, systemSettings } from '@/db/schema';
+import {
+  capturedArticles,
+  intelligenceLogs,
+  interests,
+  pushSubscriptions,
+  sessions,
+  systemSettings,
+  verificationTokens,
+} from '@/db/schema';
 import { getNewsOnServer } from '@/lib/news-fetcher';
 import { eq, lte } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -8,6 +16,9 @@ import { rateLimitByRequest } from '@/lib/rate-limit';
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LOG_RETENTION_DAYS = 1;
+const STALE_PUSH_RETENTION_DAYS = 180;
 
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(
@@ -37,12 +48,20 @@ export async function GET(req: Request) {
   if (rateLimited) return rateLimited;
 
   console.log('[CRON] Starting global intelligence scan...');
-  
+
   try {
-    // 0. Self-Cleaning: Delete logs older than 24 hours
-    const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    await db.delete(intelligenceLogs).where(lte(intelligenceLogs.timestamp, cutoffDate));
-    console.log('[CRON] Database cleanup complete: Removed signals older than 24h.');
+    // 0. Self-cleaning for temporary/expiring data.
+    const now = new Date();
+    const logCutoffDate = new Date(now.getTime() - LOG_RETENTION_DAYS * DAY_MS);
+    const stalePushCutoffDate = new Date(now.getTime() - STALE_PUSH_RETENTION_DAYS * DAY_MS);
+
+    await db.transaction(async (tx) => {
+      await tx.delete(intelligenceLogs).where(lte(intelligenceLogs.timestamp, logCutoffDate));
+      await tx.delete(sessions).where(lte(sessions.expires, now));
+      await tx.delete(verificationTokens).where(lte(verificationTokens.expires, now));
+      await tx.delete(pushSubscriptions).where(lte(pushSubscriptions.createdAt, stalePushCutoffDate));
+    });
+    console.log('[CRON] Database cleanup complete: removed old logs, expired auth rows, and stale push endpoints.');
 
     // 1. Check Global Kill Switch
     const globalSettings = await db.query.systemSettings.findFirst({
@@ -51,9 +70,9 @@ export async function GET(req: Request) {
 
     if (globalSettings && !globalSettings.isSyncEnabled) {
       console.log('[CRON] Scan aborted: Intelligence Engine is disabled globally.');
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Intelligence Engine is disabled globally.' 
+      return NextResponse.json({
+        success: false,
+        message: 'Intelligence Engine is disabled globally.'
       });
     }
 
@@ -65,8 +84,6 @@ export async function GET(req: Request) {
     });
 
     let totalNewArticles = 0;
-    const now = new Date();
-
     for (const channel of channels) {
       // 1. Skip if no keywords, or interval is set to Manual (0) or null
       const interval = channel.refreshInterval || 0;
@@ -84,7 +101,7 @@ export async function GET(req: Request) {
       console.log(`[CRON] Scanning "${channel.name}" pipeline for user ${channel.userId}...`);
       const keywords = channel.keywords.map(k => k.word);
       const articles = await getNewsOnServer(keywords.join(' OR '), channel.language || 'any', channel.country || 'any');
-      
+
       const newArticles = articles.filter(a => new Date(a.publishedAt) > lastScanAt);
 
       if (newArticles.length > 0) {
@@ -126,7 +143,7 @@ export async function GET(req: Request) {
           const subscriptions = await db.query.pushSubscriptions.findMany({
             where: eq(pushSubscriptions.userId, channel.userId)
           });
-          
+
           // Construct a "Smart" notification payload
           const count = newArticles.length;
           const notificationTitle = `${channel.name}: ${count} ${count === 1 ? 'Target Acquired' : 'Targets Detected'}`;
@@ -141,7 +158,7 @@ export async function GET(req: Request) {
               .slice(0, 3)
               .map(a => `• ${a.title.slice(0, 60)}${a.title.length > 60 ? '...' : ''}`)
               .join('\n');
-            
+
             notificationBody = `${bulletPoints}${count > 3 ? `\n...and ${count - 3} more signals.` : ''}`;
           }
 
@@ -181,10 +198,10 @@ export async function GET(req: Request) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       scannedChannels: channels.length,
-      newArticlesFound: totalNewArticles 
+      newArticlesFound: totalNewArticles
     });
   } catch (error) {
     console.error('[CRON] Scan failed:', error);

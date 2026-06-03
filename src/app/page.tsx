@@ -4,12 +4,14 @@
 
 import { useState, useEffect, useCallback, useRef, type MouseEvent } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { 
-  Bell, 
-  BellOff, 
-  Settings, 
-  Plus, 
-  X, 
+import {
+  Bell,
+  BellOff,
+  Settings,
+  Sun,
+  Moon,
+  Plus,
+  X,
   Check,
   Clock,
   Trash2,
@@ -35,7 +37,8 @@ import {
   Wifi,
   Edit2,
   MoreVertical,
-  Download
+  Download,
+  User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchNews, NewsArticle } from "@/lib/news";
@@ -100,25 +103,25 @@ const formatTime = (dateStr: string) => {
   const date = new Date(dateStr);
   const now = new Date();
   const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-  
+
   // Format to local HH:MM
   const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  
+
   if (diffInHours < 1) {
     const mins = Math.max(1, Math.floor(diffInHours * 60));
     return `${mins}M AGO • ${timeStr}`;
   }
-  
+
   if (date.toDateString() === now.toDateString()) {
     return `TODAY • ${timeStr}`;
   }
-  
+
   const yesterday = new Date();
   yesterday.setDate(now.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) {
     return `YESTERDAY • ${timeStr}`;
   }
-  
+
   return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()} • ${timeStr}`;
 };
 
@@ -156,7 +159,7 @@ const formatTimeAgo = (dateStr: string) => {
   const diffInMins = Math.floor(diffInMs / (1000 * 60));
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-  
+
   // Format to local HH:MM
   const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -227,6 +230,157 @@ const INTERVAL_OPTIONS = [
   { value: 720, label: '12 Hours' },
 ];
 
+const DEMO_GROUPS: InterestGroup[] = [
+  {
+    id: -1,
+    name: 'Bitcoin & Crypto',
+    language: 'en',
+    country: null,
+    refreshInterval: 15,
+    notificationsEnabled: true,
+    lastScanAt: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
+    keywords: [
+      { id: 1, word: 'Bitcoin ETF' },
+      { id: 2, word: 'Ethereum' },
+      { id: 3, word: 'Crypto regulation' },
+      { id: 4, word: 'Binance' },
+    ],
+  },
+  {
+    id: -2,
+    name: 'Global Politics',
+    language: 'en',
+    country: null,
+    refreshInterval: 30,
+    notificationsEnabled: true,
+    lastScanAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
+    keywords: [
+      { id: 5, word: 'US election' },
+      { id: 6, word: 'China policy' },
+      { id: 7, word: 'European Union' },
+      { id: 8, word: 'United Nations' },
+    ],
+  },
+  {
+    id: -3,
+    name: 'War Watch',
+    language: 'en',
+    country: null,
+    refreshInterval: 15,
+    notificationsEnabled: true,
+    lastScanAt: new Date(Date.now() - 36 * 60 * 1000).toISOString(),
+    keywords: [
+      { id: 9, word: 'Ukraine war' },
+      { id: 10, word: 'Middle East conflict' },
+      { id: 11, word: 'Ceasefire' },
+      { id: 12, word: 'NATO' },
+    ],
+  },
+  {
+    id: -4,
+    name: 'AI Frontier',
+    language: 'en',
+    country: null,
+    refreshInterval: 60,
+    notificationsEnabled: true,
+    lastScanAt: new Date(Date.now() - 47 * 60 * 1000).toISOString(),
+    keywords: [
+      { id: 13, word: 'OpenAI' },
+      { id: 14, word: 'AI regulation' },
+      { id: 15, word: 'Nvidia' },
+      { id: 16, word: 'Artificial intelligence' },
+    ],
+  },
+  {
+    id: -5,
+    name: 'Market Pulse',
+    language: 'en',
+    country: null,
+    refreshInterval: 30,
+    notificationsEnabled: true,
+    lastScanAt: new Date(Date.now() - 58 * 60 * 1000).toISOString(),
+    keywords: [
+      { id: 17, word: 'Federal Reserve' },
+      { id: 18, word: 'Inflation' },
+      { id: 19, word: 'Oil prices' },
+      { id: 20, word: 'Stock market' },
+    ],
+  },
+];
+
+const DEMO_NEWS: NewsArticle[] = [
+  {
+    id: 'demo-1',
+    title: 'Demo signal: Bitcoin ETF flows drive renewed market attention',
+    description: 'Signalertica groups matching stories by keyword, source, and publish time so important movement is easier to scan.',
+    url: '#demo',
+    image: null,
+    source: 'Demo Wire',
+    publishedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-2',
+    title: 'Demo signal: global policy and conflict updates detected across sources',
+    description: 'Create private channels for crypto, politics, war, AI, or markets, then let the pipeline collect new signals on schedule.',
+    url: '#demo',
+    image: null,
+    source: 'Signal Desk',
+    publishedAt: new Date(Date.now() - 38 * 60 * 1000).toISOString(),
+  },
+];
+
+const makeDemoArticle = (id: string, title: string, source: string, minutesAgo: number): NewsArticle => ({
+  id,
+  title,
+  description: 'Demo item showing how Signalertica summarizes matching signals by channel, keyword, source, and publish time.',
+  url: '#demo',
+  image: null,
+  source,
+  publishedAt: new Date(Date.now() - minutesAgo * 60 * 1000).toISOString(),
+});
+
+const DEMO_ARTICLES_BY_CHANNEL: Record<string, NewsArticle[]> = {
+  'Bitcoin & Crypto': [
+    makeDemoArticle('demo-crypto-1', 'Bitcoin ETF flows show renewed institutional demand', 'Crypto Desk', 11),
+    makeDemoArticle('demo-crypto-2', 'Ethereum developers outline next scaling milestone', 'Chain Monitor', 24),
+    makeDemoArticle('demo-crypto-3', 'Crypto regulation debate intensifies across major markets', 'Policy Wire', 37),
+    makeDemoArticle('demo-crypto-4', 'Stablecoin liquidity rises as traders reposition risk', 'Market Signal', 49),
+    makeDemoArticle('demo-crypto-5', 'Exchange reserves shift after weekend volatility', 'Onchain Brief', 64),
+  ],
+  'Global Politics': [
+    makeDemoArticle('demo-politics-1', 'Election polling narratives shift after latest policy remarks', 'Global Brief', 15),
+    makeDemoArticle('demo-politics-2', 'China policy discussions draw attention from trade analysts', 'Diplomacy Watch', 31),
+    makeDemoArticle('demo-politics-3', 'European Union leaders weigh new economic coordination plan', 'Policy Wire', 52),
+    makeDemoArticle('demo-politics-4', 'United Nations agenda highlights security and climate priorities', 'World Desk', 73),
+  ],
+  'War Watch': [
+    makeDemoArticle('demo-war-1', 'Ceasefire talks monitored as regional tensions remain elevated', 'Conflict Desk', 18),
+    makeDemoArticle('demo-war-2', 'NATO members review defense posture after border incidents', 'Security Wire', 43),
+    makeDemoArticle('demo-war-3', 'Middle East conflict updates trigger renewed diplomatic focus', 'Geopolitical Monitor', 82),
+  ],
+  'AI Frontier': [
+    makeDemoArticle('demo-ai-1', 'AI regulation proposals put frontier model safety back in focus', 'Tech Policy', 21),
+    makeDemoArticle('demo-ai-2', 'Nvidia demand signals remain central to AI infrastructure outlook', 'AI Market Desk', 57),
+  ],
+  'Market Pulse': [
+    makeDemoArticle('demo-market-1', 'Federal Reserve commentary keeps inflation expectations in focus', 'Macro Desk', 28),
+  ],
+};
+
+const DEMO_LOGS: AppNotification[] = [
+  ...DEMO_GROUPS.map((group, index) => {
+    const articles = DEMO_ARTICLES_BY_CHANNEL[group.name] || [];
+    return {
+      id: `demo-log-${group.id}`,
+      title: `+${articles.length}`,
+      body: `Demo sync complete for "${group.name}" pipeline.`,
+      channel: group.name,
+      timestamp: new Date(Date.now() - (18 + index * 14) * 60 * 1000).toISOString(),
+      articles,
+    };
+  }),
+];
+
 function useDragScroll() {
   const ref = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -259,20 +413,24 @@ function useDragScroll() {
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const [groups, setGroups] = useState<InterestGroup[]>([]);
-  const [activeGroupId, setActiveGroupId] = useState<number | null>(null);
+  const isDemoMode = status !== "loading" && !session;
+  const [groups, setGroups] = useState<InterestGroup[]>(DEMO_GROUPS);
+  const [activeGroupId, setActiveGroupId] = useState<number | null>(DEMO_GROUPS[0]?.id ?? null);
   const [channelScrollRef, channelScrollClassName, channelScrollHandlers] = useDragScroll();
   const [filterScrollRef, filterScrollClassName, filterScrollHandlers] = useDragScroll();
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupLang, setNewGroupLang] = useState("any");
   const [newKeyword, setNewKeyword] = useState("");
-  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [news, setNews] = useState<NewsArticle[]>(DEMO_NEWS);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [isNavVisible, setIsNavVisible] = useState(true);
-  const [historyLogs, setHistoryLogs] = useState<AppNotification[]>([]);
+  const [historyLogs, setHistoryLogs] = useState<AppNotification[]>(DEMO_LOGS);
   const [tickerTime, setTickerTime] = useState(0);
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLogoutTrigger, setShowLogoutTrigger] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [logChannelFilter, setLogChannelFilter] = useState<string>("all");
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [isRenamingGroupId, setIsRenamingGroupId] = useState<number | null>(null);
@@ -290,6 +448,10 @@ export default function Home() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandaloneApp, setIsStandaloneApp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.localStorage.getItem('signalertica-theme') === 'light' ? 'light' : 'dark';
+  });
   const [loading, setLoading] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<number | null>(null);
@@ -304,11 +466,25 @@ export default function Home() {
 
   const groupsRef = useRef<InterestGroup[]>([]);
   const modalHistoryRef = useRef(false);
+  const liveSessionInitializedRef = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  const requireAuth = useCallback(() => {
+    if (!session) {
+      setShowAuthModal(true);
+      return false;
+    }
+    return true;
+  }, [session]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('theme-light', themeMode === 'light');
+    window.localStorage.setItem('signalertica-theme', themeMode);
+  }, [themeMode]);
 
   const refreshNotificationDiagnostics = useCallback(async () => {
     const supported = "Notification" in window;
@@ -345,7 +521,7 @@ export default function Home() {
 
       const registration = await getServiceWorkerReady();
       let subscription = await registration.pushManager.getSubscription();
-      
+
       if (!subscription) {
         const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!publicKey) return false;
@@ -361,7 +537,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
       });
-      
+
       console.log('Push subscription established successfully.');
       await refreshNotificationDiagnostics();
       return true;
@@ -461,7 +637,7 @@ export default function Home() {
 
     // 4. Set up light background refresh (every 45s) for state sync
     const syncInterval = setInterval(async () => {
-      if (activeTab === 'home' || activeTab === 'monitor') {
+      if (activeTab === 'home' || activeTab === 'explore') {
         try {
           const res = await fetch('/api/interests');
           if (res.ok) {
@@ -512,11 +688,12 @@ export default function Home() {
   }, []);
 
   const isAnyModalOpen = !!(
-    selectedLog || 
-    showSettings || 
-    isCreatingGroup || 
-    showClearLogsModal || 
+    selectedLog ||
+    showSettings ||
+    isCreatingGroup ||
+    showClearLogsModal ||
     showLogoutModal ||
+    showAuthModal ||
     isRenamingGroupId ||
     groupToDelete ||
     keywordToDelete
@@ -545,6 +722,7 @@ export default function Home() {
         setShowSettings(false);
         setIsCreatingGroup(false);
         setShowClearLogsModal(false);
+        setShowAuthModal(false);
         setIsRenamingGroupId(null);
         setGroupToDelete(null);
         setKeywordToDelete(null);
@@ -560,6 +738,50 @@ export default function Home() {
     groupsRef.current = groups;
   }, [groups]);
 
+  useEffect(() => {
+    if (!isDemoMode) return;
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setGroups(DEMO_GROUPS);
+      setActiveGroupId(DEMO_GROUPS[0]?.id ?? null);
+      setNews(DEMO_NEWS);
+      setHistoryLogs(DEMO_LOGS);
+      setSourceFilter("all");
+      setLogChannelFilter("all");
+      setCanManageGlobalSync(false);
+      setIsGlobalSyncEnabled(true);
+      liveSessionInitializedRef.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoMode]);
+
+  useEffect(() => {
+    if (!session || liveSessionInitializedRef.current) return;
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      liveSessionInitializedRef.current = true;
+      setGroups([]);
+      setActiveGroupId(null);
+      setNews([]);
+      setHistoryLogs([]);
+      setSourceFilter("all");
+      setLogChannelFilter("all");
+      setSelectedLog(null);
+      setShowAuthModal(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
   // Load Groups, Keywords, and Global Settings
   const loadData = useCallback(async () => {
     if (!session) return;
@@ -569,8 +791,13 @@ export default function Home() {
       const data = await resp.json();
       if (Array.isArray(data)) {
         setGroups(data);
-        if (data.length > 0 && activeGroupId === null) {
+        setNews([]);
+        setSourceFilter("all");
+        if (data.length > 0 && (activeGroupId === null || !data.some((group: InterestGroup) => group.id === activeGroupId))) {
           setActiveGroupId(data[0].id);
+        } else if (data.length === 0) {
+          setActiveGroupId(null);
+          setNews([]);
         }
       }
 
@@ -611,6 +838,8 @@ export default function Home() {
   }, [loadData, refreshNotificationDiagnostics, session]);
 
   const toggleGlobalSync = async (enabled: boolean) => {
+    if (!requireAuth()) return;
+
     if (!canManageGlobalSync) {
       showToast("Admin access required for pipeline sync", "info");
       return;
@@ -655,8 +884,24 @@ export default function Home() {
     { label: "Permission", ok: notificationDiagnostics.permission === "granted" },
     { label: "Push", ok: notificationDiagnostics.pushSupported && notificationDiagnostics.pushSubscribed },
   ];
+  const demoNotice = isDemoMode ? (
+    <div className="mt-4 rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 text-center shadow-inner">
+      <p className="text-[10px] font-black uppercase tracking-widest text-white/35 leading-relaxed">
+        You are viewing demo mode. Login to create private channels, scan live signals, and receive alerts.
+      </p>
+      <button
+        onClick={() => setShowAuthModal(true)}
+        className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent hover:text-white transition-all"
+      >
+        <User size={13} strokeWidth={2.5} />
+        Login
+      </button>
+    </div>
+  ) : null;
 
   const requestNotificationPermission = async () => {
+    if (!requireAuth()) return false;
+
     if (!("Notification" in window)) {
       showToast("Notifications are not supported on this browser", "error");
       await refreshNotificationDiagnostics();
@@ -697,7 +942,7 @@ export default function Home() {
     setIsNotificationBusy(true);
     try {
       await triggerNotification(
-        "Intelligence Report: Target Acquired", 
+        "Intelligence Report: Target Acquired",
         "Encrypted signal established. Real-time surveillance protocols are active."
       );
       showToast("Test notification sent", "success");
@@ -733,6 +978,8 @@ export default function Home() {
   };
 
   const installApp = async () => {
+    if (!requireAuth()) return;
+
     if (isStandaloneApp) {
       showToast("App already installed", "info");
       return;
@@ -753,7 +1000,7 @@ export default function Home() {
     if (groupId === activeGroupId) setLoading(true);
     try {
       const data = await fetchNews(keywords, lang, country);
-      
+
       const targetGroup = groups.find(g => g.id === groupId);
       const lastScan = targetGroup?.lastScanAt ? new Date(targetGroup.lastScanAt) : new Date(0);
       const newArticles = data.filter(a => new Date(a.publishedAt) > lastScan);
@@ -762,7 +1009,7 @@ export default function Home() {
         setNews(data);
         setSourceFilter("all");
       }
-      
+
       // Update lastScanAt in DB
       if (groupId) {
         const now = new Date().toISOString();
@@ -782,7 +1029,7 @@ export default function Home() {
             timestamp: now,
             articles: newArticles
           };
-          
+
           try {
             await fetch('/api/logs', {
               method: 'POST',
@@ -796,7 +1043,7 @@ export default function Home() {
           }
         }
       }
-      
+
       return data;
     } catch (error) {
       console.error("Failed to fetch news", error);
@@ -816,6 +1063,8 @@ export default function Home() {
   };
 
   const triggerManualFetch = () => {
+    if (!requireAuth()) return;
+
     if (activeGroup && activeGroup.keywords.length > 0) {
       handleFetch(
         activeGroup.keywords.map(k => k.word),
@@ -830,11 +1079,13 @@ export default function Home() {
   // This ensures better battery life and background reliability on mobile.
 
   const createGroup = async () => {
+    if (!requireAuth()) return;
+
     if (!newGroupName.trim()) return;
     try {
       const resp = await fetch('/api/interests', {
         method: 'POST',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: newGroupName.trim(),
           language: newGroupLang === 'any' ? null : newGroupLang
         })
@@ -853,6 +1104,8 @@ export default function Home() {
   };
 
   const updateGroupSetting = async (id: number, settings: Partial<InterestGroup>) => {
+    if (!requireAuth()) return;
+
     try {
       await fetch(`/api/interests?id=${id}`, {
         method: 'PATCH',
@@ -860,7 +1113,7 @@ export default function Home() {
       });
       const targetGroup = groups.find(g => g.id === id);
       setGroups(prev => prev.map(g => g.id === id ? { ...g, ...settings } : g));
-      
+
       const gName = targetGroup?.name || "Channel";
       if ('notificationsEnabled' in settings) {
         showToast(settings.notificationsEnabled ? `"${gName}" monitoring activated` : `"${gName}" monitoring suspended`, "success");
@@ -879,9 +1132,11 @@ export default function Home() {
   };
 
   const toggleAllNotifications = async (enabled: boolean) => {
+    if (!requireAuth()) return;
+
     try {
       // Parallel update for all groups
-      await Promise.all(groups.map(g => 
+      await Promise.all(groups.map(g =>
         fetch(`/api/interests?id=${g.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ notificationsEnabled: enabled })
@@ -896,6 +1151,8 @@ export default function Home() {
   };
 
   const deleteGroup = async () => {
+    if (!requireAuth()) return;
+
     if (!groupToDelete) return;
     const id = groupToDelete;
     try {
@@ -915,6 +1172,8 @@ export default function Home() {
   };
 
   const addKeyword = async () => {
+    if (!requireAuth()) return;
+
     if (!activeGroupId || !newKeyword.trim()) return;
     try {
       const resp = await fetch('/api/keywords', {
@@ -922,7 +1181,7 @@ export default function Home() {
         body: JSON.stringify({ interestId: activeGroupId, word: newKeyword.trim() })
       });
       const savedKeyword = await resp.json();
-      
+
       setGroups(groups.map(g => {
         if (g.id === activeGroupId) {
           return { ...g, keywords: [...g.keywords, savedKeyword] };
@@ -938,10 +1197,13 @@ export default function Home() {
   };
 
   const removeKeyword = (id: number, word: string) => {
+    if (!requireAuth()) return;
     setKeywordToDelete({ id, word });
   };
 
   const confirmRemoveKeyword = async () => {
+    if (!requireAuth()) return;
+
     if (!keywordToDelete) return;
     const { id, word } = keywordToDelete;
     try {
@@ -962,59 +1224,15 @@ export default function Home() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-[#050507] flex flex-col items-center justify-center gap-4 text-center">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
-          <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent" />
-        </div>
-        <p className="text-xs font-black text-white/40 tracking-[0.2em] uppercase">Decrypting Credentials...</p>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-[#050507] flex items-center justify-center p-4 overflow-hidden relative">
+      <main className="app-shell theme-loading-screen relative z-0 min-h-screen flex flex-col items-center justify-center gap-4 text-center">
         <div className="bg-blob-1" />
         <div className="bg-blob-2" />
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="card-rich p-8 w-full max-w-[420px] text-center border-accent/20 flex flex-col gap-8 relative z-10"
-        >
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative group">
-              <div className="absolute -inset-2 bg-accent/20 rounded-2xl blur-xl group-hover:bg-accent/30 transition-all animate-pulse-slow" />
-              <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border border-white/10 glass-light">
-                <img src="/icon-192x192.png" alt="Signalertica Logo" className="w-full h-full object-cover" />
-              </div>
-            </div>
-            <div className="flex flex-col mt-2">
-              <h1 className="text-2xl font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
-              <span className="text-[10px] font-black text-accent tracking-[.3em] uppercase opacity-80 mt-1">Smart Signal Tracker</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-white/40 leading-relaxed max-w-[280px] mx-auto">
-            Access secure keyword surveillance channels, live telemetry sync, and real-time push alerting.
-          </p>
-
-          <button 
-            onClick={() => signIn("google")}
-            className="button-primary py-4 px-6 flex items-center justify-center gap-3 text-xs uppercase tracking-wider font-black shadow-lg shadow-accent/20 hover:shadow-accent/30 w-full"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-            </svg>
-            <span>Authorize Google Access</span>
-          </button>
-        </motion.div>
-      </div>
+        <div className="relative">
+          <div className="theme-loading-ring w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
+          <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent" />
+        </div>
+        <p className="theme-loading-text text-xs font-black text-white/40 tracking-[0.2em] uppercase">Decrypting Credentials...</p>
+      </main>
     );
   }
 
@@ -1023,14 +1241,14 @@ export default function Home() {
       <div className="bg-blob-1" />
       <div className="bg-blob-2" />
       {/* Premium Navigation */}
-      <motion.nav 
+      <motion.nav
         initial={{ y: 0 }}
         animate={{ y: isNavVisible ? 0 : "-100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="glass phone-fixed fixed top-0 z-50 px-3 py-2"
       >
         <div className="nav-container mx-auto">
-          <motion.div 
+          <motion.div
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             className="flex min-w-0 items-center gap-2.5"
@@ -1043,36 +1261,72 @@ export default function Home() {
             </div>
             <div className="flex min-w-0 flex-col">
               <h1 className="whitespace-nowrap text-[18px] font-black tracking-tighter leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">SIGNALERTICA</h1>
-              <span className="whitespace-nowrap text-[8px] font-black text-accent tracking-[.16em] uppercase opacity-80">Smart Signal Tracker</span>
+              <span className="brand-tagline whitespace-nowrap text-[8px] font-black text-accent tracking-[.16em] uppercase opacity-80">Smart Signal Tracker</span>
             </div>
           </motion.div>
-          
+
           <div className="flex shrink-0 items-center gap-2">
-            <button 
-              onClick={() => setShowSettings(!showSettings)}
+            {isDemoMode && (
+              <span className="animate-demo-breath shrink-0 rounded-full border border-white/70 bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-black">
+                Demo
+              </span>
+            )}
+            <button
+              onClick={() => {
+                if (!requireAuth()) return;
+                setShowSettings(!showSettings);
+              }}
               className="aspect-square w-9 shrink-0 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white/10 transition-all active:scale-95"
             >
               <LayoutGrid size={18} className="text-white/70" />
             </button>
-            {session && (
+            {session ? (
               <div className="flex shrink-0 items-center gap-2 pl-2 border-l border-white/10">
-                {session.user?.image ? (
-                  <img 
-                    src={session.user.image} 
-                    alt={session.user.name || "User"} 
-                    className="aspect-square w-8 shrink-0 rounded-xl border border-white/10 object-cover"
-                  />
-                ) : (
-                  <div className="aspect-square w-8 shrink-0 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent uppercase">
-                    {session.user?.name ? session.user.name.slice(0, 2) : "US"}
-                  </div>
-                )}
-                <button 
-                  onClick={() => setShowLogoutModal(true)}
-                  className="aspect-square w-8 shrink-0 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-error/10 hover:text-error hover:border-error/20 transition-all active:scale-95 text-white/50"
-                  title="Deauthorize session"
+                <button
+                  onClick={() => setShowLogoutTrigger((visible) => !visible)}
+                  className="aspect-square w-8 shrink-0 rounded-xl transition-all active:scale-95"
+                  title="Account menu"
                 >
-                  <X size={16} />
+                  {session.user?.image && failedAvatarUrl !== session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt={session.user.name || "User"}
+                      className="h-full w-full rounded-xl border border-white/10 object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={() => setFailedAvatarUrl(session.user?.image || null)}
+                    />
+                  ) : (
+                    <div className="h-full w-full rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-white/60 uppercase">
+                      {(session.user?.name || session.user?.email || "US").slice(0, 2)}
+                    </div>
+                  )}
+                </button>
+                <AnimatePresence initial={false}>
+                  {showLogoutTrigger && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8, x: -6 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, x: -6 }}
+                      onClick={() => {
+                        setShowLogoutTrigger(false);
+                        setShowLogoutModal(true);
+                      }}
+                      className="aspect-square w-8 shrink-0 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white/10 hover:text-white hover:border-white/15 transition-all active:scale-95 text-white/50"
+                      title="Deauthorize session"
+                    >
+                      <X size={16} />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="aspect-square w-9 shrink-0 rounded-xl border border-accent/30 bg-accent/10 text-accent shadow-[0_0_14px_var(--accent-glow)] flex items-center justify-center hover:bg-accent hover:text-white transition-all active:scale-95"
+                  title="Authorize access"
+                >
+                  <User size={17} strokeWidth={2.5} />
                 </button>
               </div>
             )}
@@ -1083,453 +1337,462 @@ export default function Home() {
       {/* Main Content Areas */}
       {activeTab === 'home' && (
         <div className="pt-20 px-4 w-full max-w-[430px] mx-auto flex flex-col gap-4 fade-in">
-        
-        {/* Horizontal Channel Bar */}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Intelligence Hub</h2>
-            <button 
-              onClick={() => setIsCreatingGroup(!isCreatingGroup)}
-              className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent hover:bg-accent hover:text-white transition-all shadow-lg shadow-accent/10"
-            >
-              <Plus size={20} />
-            </button>
-          </div>
 
-          <div 
-            className={`flex gap-3 pb-2 -mx-1 px-1 ${channelScrollClassName}`}
-            ref={channelScrollRef}
-            {...channelScrollHandlers}
-          >
-            {groups.map(group => (
-              <motion.button
-                key={group.id}
-                whileTap={{ scale: 0.95 }}
+          {/* Horizontal Channel Bar */}
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Intelligence Hub</h2>
+              <button
                 onClick={() => {
-                  setActiveGroupId(group.id);
-                  setNews([]);
+                  if (!requireAuth()) return;
+                  setIsCreatingGroup(!isCreatingGroup);
                 }}
-                className={`flex-shrink-0 flex flex-col items-center gap-1 group relative`}
+                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:bg-white/10 hover:text-white transition-all shadow-lg shadow-black/5"
               >
-                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center transition-all duration-500 border-2 ${
-                  activeGroupId === group.id 
-                  ? 'bg-accent border-accent shadow-xl shadow-accent/30' 
-                  : 'bg-white/5 border-transparent hover:border-white/10'
-                }`}>
-                  {(() => {
-                    const IconObj = getChannelIcon(group.name);
-                    return <IconObj size={24} className={activeGroupId === group.id ? 'text-white' : 'text-white/20 group-hover:text-white/40'} />;
-                  })()}
-                </div>
-                {group.notificationsEnabled && (
-                  <div className="absolute top-0 right-0 w-3 h-3 bg-accent-secondary rounded-full border-2 border-background animate-pulse" />
-                )}
-                <span className={`text-[11px] font-bold truncate max-w-[70px] ${activeGroupId === group.id ? 'text-white' : 'text-white/40'}`}>
-                  {group.name}
-                </span>
-              </motion.button>
-            ))}
-          </div>
-          
-          <AnimatePresence>
-            {isCreatingGroup && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                className="card-rich p-4 border-accent/20"
-              >
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-white/40">New Channel</h3>
-                    <X size={18} className="text-white/20 cursor-pointer hover:text-white" onClick={() => setIsCreatingGroup(false)} />
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <div
+              className={`flex gap-3 pb-2 -mx-1 px-1 ${channelScrollClassName}`}
+              ref={channelScrollRef}
+              {...channelScrollHandlers}
+            >
+              {groups.map(group => (
+                <motion.button
+                  key={group.id}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setActiveGroupId(group.id);
+                    setNews([]);
+                  }}
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 group relative`}
+                >
+                  <div className={`theme-channel-tile w-16 h-16 rounded-3xl flex items-center justify-center transition-all duration-500 border-2 ${activeGroupId === group.id
+                      ? 'is-active bg-accent border-accent shadow-xl shadow-accent/30'
+                      : 'is-muted bg-white/5 border-transparent hover:border-white/10'
+                    }`}>
+                    {(() => {
+                      const IconObj = getChannelIcon(group.name);
+                      return <IconObj size={24} className={`theme-channel-icon ${activeGroupId === group.id ? 'is-active text-white' : 'is-muted text-white/20 group-hover:text-white/40'}`} />;
+                    })()}
                   </div>
-                  <div className="flex flex-col gap-3">
-                    <input 
-                      type="text" 
-                      autoFocus
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      placeholder="E.g. Middle East War, Crypto..."
-                      className="input-field py-3 px-4 text-sm"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="relative">
-                        <select 
-                          value={newGroupLang}
-                          onChange={(e) => setNewGroupLang(e.target.value)}
-                          className="input-field py-3 pr-10 text-xs appearance-none cursor-pointer"
-                        >
-                          {LANGUAGES.map(l => (
-                            <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
-                          ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                  {group.notificationsEnabled && (
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-accent-secondary rounded-full border-2 border-background animate-pulse" />
+                  )}
+                  <span className={`theme-channel-label text-[11px] font-bold truncate max-w-[70px] ${activeGroupId === group.id ? 'is-active text-white' : 'is-muted text-white/40'}`}>
+                    {group.name}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {isCreatingGroup && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                  className="card-rich p-4 border-accent/20"
+                >
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-white/40">New Channel</h3>
+                      <X size={18} className="text-white/20 cursor-pointer hover:text-white" onClick={() => setIsCreatingGroup(false)} />
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        placeholder="E.g. Middle East War, Crypto..."
+                        className="input-field py-3 px-4 text-sm"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="relative">
+                          <select
+                            value={newGroupLang}
+                            onChange={(e) => setNewGroupLang(e.target.value)}
+                            className="input-field py-3 pr-10 text-xs appearance-none cursor-pointer"
+                          >
+                            {LANGUAGES.map(l => (
+                              <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                        </div>
+                        <button onClick={createGroup} className="button-primary py-3 px-4 text-xs font-black uppercase">
+                          Initialize
+                        </button>
                       </div>
-                      <button onClick={createGroup} className="button-primary py-3 px-4 text-xs font-black uppercase">
-                        Initialize
-                      </button>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
 
-        {/* Active Channel Dashboard */}
-        {activeGroup && (
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4"
-          >
-            <div className="card-rich p-4 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                {(() => {
+          {/* Active Channel Dashboard */}
+          {activeGroup && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col gap-4"
+            >
+              <div className="card-rich p-4 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                  {(() => {
                     const IconObj = getChannelIcon(activeGroup.name);
                     return <IconObj size={140} strokeWidth={4} />;
-                })()}
-              </div>
-              
-              <div className="relative z-10 flex flex-col gap-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="badge bg-accent text-white shadow-lg shadow-accent/20">Active Channel</div>
-                      <div className="badge bg-white/10 text-white/60 border border-white/5 flex items-center gap-1.5 backdrop-blur-sm">
-                        <span>{LANGUAGES.find(l => l.code === (activeGroup.language || 'any'))?.flag}</span>
-                        <span>{LANGUAGES.find(l => l.code === (activeGroup.language || 'any'))?.name}</span>
-                      </div>
-                    </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tighter italic break-words leading-tight">{activeGroup.name}</h3>
-                  </div>
-                  <div className="relative flex-shrink-0">
-                    <button 
-                      onClick={() => setShowActionMenu(!showActionMenu)} 
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border border-white/5 shadow-xl ${
-                        showActionMenu ? 'bg-accent text-white border-accent' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <MoreVertical size={20} />
-                    </button>
-
-                    <AnimatePresence>
-                      {showActionMenu && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-10" 
-                            onClick={() => setShowActionMenu(false)} 
-                          />
-                          <motion.div 
-                            initial={{ opacity: 0, scale: 0.9, y: -10, x: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: -10, x: 10 }}
-                            className="absolute right-0 top-14 w-48 bg-[#1a1b26]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden flex flex-col p-1.5"
-                          >
-                             <button 
-                               onClick={() => {
-                                 setShowActionMenu(false);
-                                 setEditGroupName(activeGroup.name);
-                                 setIsRenamingGroupId(activeGroup.id);
-                               }}
-                               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-xs font-bold text-white/70 hover:text-white transition-all text-left"
-                             >
-                                <Edit2 size={16} className="text-accent" />
-                                <span>Rename Channel</span>
-                             </button>
-                             <div className="h-px bg-white/5 mx-2 my-1" />
-                             <button 
-                               onClick={() => {
-                                 setShowActionMenu(false);
-                                 setGroupToDelete(activeGroup.id);
-                               }}
-                               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-error/10 text-xs font-bold text-white/50 hover:text-error transition-all text-left"
-                             >
-                                <Trash2 size={16} className="text-error/70" />
-                                <span>Delete Channel</span>
-                             </button>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                  })()}
                 </div>
 
-                {/* Per-Channel Automation Settings */}
-                <div className="grid grid-cols-1 gap-4 bg-white/5 p-4 rounded-[28px] border border-white/5">
-                   <div className="flex items-center justify-between">
+                <div className="relative z-10 flex flex-col gap-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="badge bg-accent text-white shadow-lg shadow-accent/20">Active Channel</div>
+                        <div className="badge bg-white/10 text-white/60 border border-white/5 flex items-center gap-1.5 backdrop-blur-sm">
+                          <span>{LANGUAGES.find(l => l.code === (activeGroup.language || 'any'))?.flag}</span>
+                          <span>{LANGUAGES.find(l => l.code === (activeGroup.language || 'any'))?.name}</span>
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-black uppercase tracking-tighter italic break-words leading-tight">{activeGroup.name}</h3>
+                    </div>
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onClick={() => setShowActionMenu(!showActionMenu)}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border border-white/5 shadow-xl ${showActionMenu ? 'bg-white/10 text-white border-white/20' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <MoreVertical size={20} />
+                      </button>
+
+                      <AnimatePresence>
+                        {showActionMenu && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setShowActionMenu(false)}
+                            />
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9, y: -10, x: 10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: -10, x: 10 }}
+                              className="absolute right-0 top-14 w-48 bg-[#1a1b26]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden flex flex-col p-1.5"
+                            >
+                              <button
+                                onClick={() => {
+                                  if (!requireAuth()) return;
+                                  setShowActionMenu(false);
+                                  setEditGroupName(activeGroup.name);
+                                  setIsRenamingGroupId(activeGroup.id);
+                                }}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-xs font-bold text-white/70 hover:text-white transition-all text-left"
+                              >
+                                <Edit2 size={16} className="text-white/55" />
+                                <span>Rename Channel</span>
+                              </button>
+                              <div className="h-px bg-white/5 mx-2 my-1" />
+                              <button
+                                onClick={() => {
+                                  if (!requireAuth()) return;
+                                  setShowActionMenu(false);
+                                  setGroupToDelete(activeGroup.id);
+                                }}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-xs font-bold text-white/50 hover:text-white transition-all text-left"
+                              >
+                                <Trash2 size={16} className="text-white/45" />
+                                <span>Delete Channel</span>
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Per-Channel Automation Settings */}
+                  <div className="grid grid-cols-1 gap-4 bg-white/5 p-4 rounded-[28px] border border-white/5">
+                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Auto Alerts</span>
                         <span className="text-xs font-bold text-white uppercase">{activeGroup.notificationsEnabled ? 'Active' : 'Muted'}</span>
                       </div>
-                      <button 
+                      <button
                         onClick={() => updateGroupSetting(activeGroup.id, { notificationsEnabled: !activeGroup.notificationsEnabled })}
                         className={`w-14 h-8 rounded-full relative transition-all duration-300 ${activeGroup.notificationsEnabled ? 'bg-accent-secondary' : 'bg-white/10'}`}
                       >
-                         <motion.div 
-                           animate={{ x: activeGroup.notificationsEnabled ? 24 : 4 }}
-                           className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-lg" 
-                         />
+                        <motion.div
+                          animate={{ x: activeGroup.notificationsEnabled ? 24 : 4 }}
+                          className="absolute top-1/2 -translate-y-1/2 w-6 h-6 shrink-0 bg-white rounded-full shadow-lg"
+                        />
                       </button>
-                   </div>
-                   <div className="flex items-center justify-between ">
+                    </div>
+                    <div className="flex items-center justify-between ">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Interval</span>
                         <span className="text-xs font-bold text-white uppercase">
-                           {INTERVAL_OPTIONS.find(o => o.value === activeGroup.refreshInterval)?.label || `${activeGroup.refreshInterval} Mins`}
+                          {INTERVAL_OPTIONS.find(o => o.value === activeGroup.refreshInterval)?.label || `${activeGroup.refreshInterval} Mins`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                         <div className="relative">
-                           <select 
-                             value={INTERVAL_OPTIONS.some(o => o.value === activeGroup.refreshInterval) ? activeGroup.refreshInterval : "custom"}
-                             onChange={(e) => {
-                               const val = e.target.value;
-                               if (val === "custom") {
-                                 setIsCustomMode(true);
-                               } else {
-                                 setIsCustomMode(false);
-                                 updateGroupSetting(activeGroup.id, { refreshInterval: parseInt(val) });
-                               }
-                             }}
-                             className="bg-black/40 border border-white/10 rounded-xl pl-3 pr-10 h-8 text-[10px] font-black text-white outline-none cursor-pointer appearance-none hover:border-white/20 transition-all flex items-center"
-                           >
-                             {INTERVAL_OPTIONS.map(opt => (
-                               <option key={opt.value} value={opt.value} className="bg-[#121214]">{opt.label}</option>
-                             ))}
-                             <option value="custom" className="bg-[#121214]">Custom...</option>
-                           </select>
-                           <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
-                         </div>
-                         {isCustomMode && (
-                           <input 
-                             type="number"
-                             min="1"
-                             autoFocus
-                             placeholder="Mins"
-                             value={activeGroup.refreshInterval === 0 ? '' : activeGroup.refreshInterval}
-                             onChange={(e) => updateGroupSetting(activeGroup.id, { refreshInterval: parseInt(e.target.value) || 0 })}
-                             className="w-16 h-8 bg-black/40 border border-white/10 rounded-xl px-2 text-[10px] font-black text-white outline-none focus:border-accent"
-                           />
-                         )}
-                      </div>
-                   </div>
-                </div>
-                
-                {activeGroup.notificationsEnabled && activeGroup.refreshInterval === 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-accent/5 border border-accent/20 p-4 rounded-2xl flex items-start gap-3 -mt-4"
-                  >
-                    <Settings size={16} className="text-accent mt-0.5" />
-                    <p className="text-[10px] font-bold text-accent/80 leading-relaxed uppercase tracking-wider">
-                      Note: Alerts are enabled but Interval is Manual. Signalertica will only notify you when you trigger a manual scan.
-                    </p>
-                  </motion.div>
-                )}
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex gap-3">
-                    <input 
-                      type="text" 
-                      value={newKeyword}
-                      onChange={(e) => setNewKeyword(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
-                      placeholder="Focus area..."
-                      className="input-field flex-1 bg-black/40 border-white/5 py-3 px-4"
-                    />
-                    <button onClick={addKeyword} className="w-12 h-12 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
-                      <Plus size={28} />
-                    </button>
-                  </div>
-
-                  {activeGroup.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-3">
-                      {activeGroup.keywords.map(kw => (
-                        <motion.div 
-                          layout
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          key={kw.id}
-                          className="bg-accent/5 border border-accent/20 rounded-2xl px-5 py-2.5 flex items-center gap-3 transition-colors hover:border-accent/40"
-                        >
-                          <span className="text-xs font-black text-accent tracking-tight break-all">{kw.word.toUpperCase()}</span>
-                          <X size={16} className="text-accent/40 cursor-pointer hover:text-white flex-shrink-0" onClick={() => removeKeyword(kw.id, kw.word)} />
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className={`flex flex-col items-stretch justify-between border-t border-white/5 gap-4 ${
-                  activeGroup.keywords.length > 0 ? 'pt-5 mt-0' : 'pt-4 mt-0'
-                }`}>
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Source Localization</span>
-                      <div className="relative">
-                        <select 
-                          value={activeGroup.language || 'any'}
-                          onChange={(e) => updateGroupSetting(activeGroup.id, { language: e.target.value === 'any' ? null : e.target.value })}
-                          className="bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-xs font-black text-white outline-none cursor-pointer hover:border-accent transition-all min-w-[180px] shadow-inner appearance-none"
-                        >
-                          {LANGUAGES.map(l => (
-                            <option key={l.code} value={l.code} className="bg-[#121214]">{l.flag} {l.name}</option>
-                          ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                        <div className="relative">
+                          <select
+                            value={INTERVAL_OPTIONS.some(o => o.value === activeGroup.refreshInterval) ? activeGroup.refreshInterval : "custom"}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "custom") {
+                                setIsCustomMode(true);
+                              } else {
+                                setIsCustomMode(false);
+                                updateGroupSetting(activeGroup.id, { refreshInterval: parseInt(val) });
+                              }
+                            }}
+                            className="bg-black/40 border border-white/10 rounded-xl pl-3 pr-10 h-8 text-[10px] font-black text-white outline-none cursor-pointer appearance-none hover:border-white/20 transition-all flex items-center"
+                          >
+                            {INTERVAL_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value} className="bg-[#121214]">{opt.label}</option>
+                            ))}
+                            <option value="custom" className="bg-[#121214]">Custom...</option>
+                          </select>
+                          <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                        </div>
+                        {isCustomMode && (
+                          <input
+                            type="number"
+                            min="1"
+                            autoFocus
+                            placeholder="Mins"
+                            value={activeGroup.refreshInterval === 0 ? '' : activeGroup.refreshInterval}
+                            onChange={(e) => updateGroupSetting(activeGroup.id, { refreshInterval: parseInt(e.target.value) || 0 })}
+                            className="w-16 h-8 bg-black/40 border border-white/10 rounded-xl px-2 text-[10px] font-black text-white outline-none focus:border-accent"
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
-                  {activeGroup.keywords.length > 0 && (
-                    <button 
-                      onClick={triggerManualFetch} 
-                      className="button-primary flex items-center gap-4 group/btn py-3 px-6 shadow-2xl"
+
+                  {activeGroup.notificationsEnabled && activeGroup.refreshInterval === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-accent/5 border border-accent/20 p-4 rounded-2xl flex items-start gap-3 -mt-4"
                     >
-                      <Search size={22} className="group-hover/btn:rotate-12 transition-transform" />
-                      <span className="text-xs uppercase tracking-[0.2em] font-black italic">Scan Pipeline</span>
-                    </button>
+                      <Settings size={16} className="text-accent mt-0.5" />
+                      <p className="text-[10px] font-bold text-accent/80 leading-relaxed uppercase tracking-wider">
+                        Note: Alerts are enabled but Interval is Manual. Signalertica will only notify you when you trigger a manual scan.
+                      </p>
+                    </motion.div>
                   )}
+
+                  <div className="flex flex-col gap-4">
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
+                        placeholder="Focus area..."
+                        className="input-field flex-1 bg-black/40 border-white/5 py-3 px-4"
+                      />
+                      <button onClick={addKeyword} className="w-12 h-12 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
+                        <Plus size={28} />
+                      </button>
+                    </div>
+
+                    {activeGroup.keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-3">
+                        {activeGroup.keywords.map(kw => (
+                          <motion.div
+                            layout
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            key={kw.id}
+                            className="bg-white/5 border border-white/20 rounded-2xl px-5 py-2.5 flex items-center gap-3 transition-colors hover:border-white/30"
+                          >
+                            <span className="text-xs font-black text-white/80 tracking-tight break-all">{kw.word.toUpperCase()}</span>
+                            <X size={16} className="text-white/45 cursor-pointer hover:text-white flex-shrink-0" onClick={() => removeKeyword(kw.id, kw.word)} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`flex flex-col items-stretch justify-between border-t border-white/5 gap-4 ${activeGroup.keywords.length > 0 ? 'pt-5 mt-0' : 'pt-4 mt-0'
+                    }`}>
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Source Localization</span>
+                        <div className="relative">
+                          <select
+                            value={activeGroup.language || 'any'}
+                            onChange={(e) => updateGroupSetting(activeGroup.id, { language: e.target.value === 'any' ? null : e.target.value })}
+                            className="bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-xs font-black text-white outline-none cursor-pointer hover:border-accent transition-all min-w-[180px] shadow-inner appearance-none"
+                          >
+                            {LANGUAGES.map(l => (
+                              <option key={l.code} value={l.code} className="bg-[#121214]">{l.flag} {l.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+                    {activeGroup.keywords.length > 0 && (
+                      <button
+                        onClick={triggerManualFetch}
+                        className="button-primary flex items-center gap-4 group/btn py-3 px-6 shadow-2xl"
+                      >
+                        <Search size={22} className="group-hover/btn:rotate-12 transition-transform" />
+                        <span className="text-xs uppercase tracking-[0.2em] font-black italic">Scan Pipeline</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.section>
-        )}
+            </motion.section>
+          )}
 
-        {/* News Feed Gallery */}
-        <section className="flex flex-col gap-4">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-white/40">
-              Intelligence Feed
-            </h2>
-            {news.length > 0 && (
-              <span className="text-[10px] font-black text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20">
-                {news.length} SIGNALS DETECTED
-              </span>
-            )}
-          </div>
-
-          {!activeGroup ? (
-            <div className="py-20 flex flex-col items-center gap-6 text-center">
-              <div className="w-24 h-24 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/10 animate-pulse">
-                <Radar size={40} className="text-white/10" />
-              </div>
-              <p className="text-sm text-white/30 max-w-[200px] leading-relaxed">Select or create a channel to begin scanning data.</p>
+          {/* News Feed Gallery */}
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-[11px] font-black uppercase tracking-widest text-white/40">
+                Intelligence Feed
+              </h2>
+              {news.length > 0 && (
+                <span className="text-[10px] font-black text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20">
+                  {news.length} SIGNALS DETECTED
+                </span>
+              )}
             </div>
-          ) : loading ? (
-            <div className="py-20 flex flex-col items-center gap-8 text-center">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
-                <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent" />
+
+            {!activeGroup ? (
+              <div className="py-20 flex flex-col items-center gap-6 text-center">
+                <div className="w-24 h-24 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/10 animate-pulse">
+                  <Radar size={40} className="text-white/10" />
+                </div>
+                <p className="text-sm text-white/30 max-w-[200px] leading-relaxed">Select or create a channel to begin scanning data.</p>
               </div>
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-bold text-white uppercase tracking-widest">Injecting Keywords...</p>
-                <div className="flex items-center gap-1 justify-center">
-                  {activeGroup.keywords.slice(0, 3).map((k, i) => (
-                    <span key={i} className="text-[10px] text-white/20">#{k.word}</span>
+            ) : loading ? (
+              <div className="py-20 flex flex-col items-center gap-8 text-center">
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
+                  <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-bold text-white uppercase tracking-widest">Injecting Keywords...</p>
+                  <div className="flex items-center gap-1 justify-center">
+                    {activeGroup.keywords.slice(0, 3).map((k, i) => (
+                      <span key={i} className="text-[10px] text-white/20">#{k.word}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : news.length > 0 ? (
+              <div className="flex flex-col gap-6">
+                {uniqueSources.length > 1 && (
+                  <div
+                    className={`flex items-center gap-3 pb-2 -mx-1 px-1 ${filterScrollClassName}`}
+                    ref={filterScrollRef}
+                    {...filterScrollHandlers}
+                  >
+                    <button
+                      onClick={() => setSourceFilter("all")}
+                      className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${sourceFilter === 'all' ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10 hover:text-white/80'}`}
+                    >
+                      ALL SOURCES
+                    </button>
+                    {uniqueSources.map(source => (
+                      <button
+                        key={source}
+                        onClick={() => setSourceFilter(source)}
+                        className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${sourceFilter === source ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10 hover:text-white/80'}`}
+                      >
+                        {source}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-col gap-3">
+                  {filteredNews.map((article, i) => (
+                    <motion.div
+                      key={article.id}
+                      initial={{ opacity: 0, scale: 0.98, x: -10 }}
+                      whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                      viewport={{ once: true, margin: "-20px" }}
+                      transition={{
+                        duration: 0.3,
+                        delay: Math.min(i * 0.03, 0.3),
+                        ease: "easeOut"
+                      }}
+                      className="card-rich group cursor-pointer p-4 flex gap-4 items-start relative overflow-hidden pr-8"
+                      onClick={() => {
+                        if (isDemoMode) {
+                          setShowAuthModal(true);
+                          return;
+                        }
+                        window.open(article.url, '_blank');
+                      }}
+                    >
+                      <div className="flex-1 flex flex-col gap-2 min-w-0 z-10">
+                        <div className="flex items-center flex-wrap gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest leading-none">
+                          <Clock size={12} className="text-accent/60 flex-shrink-0" />
+                          <span>{formatTime(article.publishedAt)}</span>
+                          <span className="w-1 h-1 rounded-full bg-white/20" />
+                          <span className="text-white/80">{article.source}</span>
+                        </div>
+                        <h3 className="text-[17px] font-black leading-[1.2] tracking-tight group-hover:text-accent transition-colors">{article.title}</h3>
+                        {article.description && (
+                          <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">{article.description}</p>
+                        )}
+                      </div>
+
+                      {article.image && (
+                        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 z-10 hidden">
+                          <img
+                            src={article.image}
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            alt=""
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Subtle right chevron indicating it's a clickable link */}
+                      <ChevronRight size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/5 group-hover:text-accent transform group-hover:translate-x-1 transition-all" />
+                    </motion.div>
                   ))}
                 </div>
               </div>
-            </div>
-          ) : news.length > 0 ? (
-            <div className="flex flex-col gap-6">
-              {uniqueSources.length > 1 && (
-                <div 
-                  className={`flex items-center gap-3 pb-2 -mx-1 px-1 ${filterScrollClassName}`}
-                  ref={filterScrollRef}
-                  {...filterScrollHandlers}
-                >
-                 <button 
-                   onClick={() => setSourceFilter("all")} 
-                   className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${sourceFilter === 'all' ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10 hover:text-white/80'}`}
-                 >
-                   ALL SOURCES
-                 </button>
-                 {uniqueSources.map(source => (
-                   <button 
-                     key={source}
-                     onClick={() => setSourceFilter(source)}
-                     className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${sourceFilter === source ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10 hover:text-white/80'}`}
-                   >
-                     {source}
-                   </button>
-                 ))}
-                </div>
-              )}
-              <div className="flex flex-col gap-3">
-                {filteredNews.map((article, i) => (
-                <motion.div 
-                  key={article.id}
-                  initial={{ opacity: 0, scale: 0.98, x: -10 }}
-                  whileInView={{ opacity: 1, scale: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-20px" }}
-                  transition={{ 
-                    duration: 0.3,
-                    delay: Math.min(i * 0.03, 0.3),
-                    ease: "easeOut"
-                  }}
-                  className="card-rich group cursor-pointer p-4 flex gap-4 items-start relative overflow-hidden pr-8"
-                  onClick={() => window.open(article.url, '_blank')}
-                >
-                  <div className="flex-1 flex flex-col gap-2 min-w-0 z-10">
-                    <div className="flex items-center flex-wrap gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest leading-none">
-                       <Clock size={12} className="text-accent/60 flex-shrink-0" /> 
-                       <span>{formatTime(article.publishedAt)}</span>
-                       <span className="w-1 h-1 rounded-full bg-white/20" />
-                       <span className="text-white/80">{article.source}</span>
-                    </div>
-                    <h3 className="text-[17px] font-black leading-[1.2] tracking-tight group-hover:text-accent transition-colors">{article.title}</h3>
-                    {article.description && (
-                      <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">{article.description}</p>
-                    )}
-                  </div>
-                  
-                  {article.image && (
-                    <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 z-10 hidden">
-                      <img 
-                        src={article.image} 
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                        alt=""
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                      />
-                    </div>
+            ) : (
+              <div className="py-24 px-8 flex flex-col items-center gap-8 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
+                <Radar size={60} strokeWidth={1} className="text-white/10" />
+                <div className="flex flex-col gap-4 max-w-[280px]">
+                  <p className="text-xl font-black tracking-tight uppercase italic">{activeGroup.keywords.length > 0 ? 'Ready to Scan' : 'Pipeline Empty'}</p>
+                  <p className="text-xs text-white/40 leading-relaxed font-bold">
+                    {activeGroup.keywords.length > 0
+                      ? `Click below to scan for ${activeGroup.name} intelligence.`
+                      : 'Add keywords to this channel to begin scanning for signal updates.'}
+                  </p>
+                  {activeGroup.keywords.length > 0 && (
+                    <button
+                      onClick={triggerManualFetch}
+                      className="button-primary mt-8 mb-4 py-5"
+                    >
+                      Start Intelligence Scan
+                    </button>
                   )}
-                  
-                  {/* Subtle right chevron indicating it's a clickable link */}
-                  <ChevronRight size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/5 group-hover:text-accent transform group-hover:translate-x-1 transition-all" />
-                </motion.div>
-              ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="py-24 px-8 flex flex-col items-center gap-8 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
-              <Radar size={60} strokeWidth={1} className="text-white/10" />
-              <div className="flex flex-col gap-4 max-w-[280px]">
-                <p className="text-xl font-black tracking-tight uppercase italic">{activeGroup.keywords.length > 0 ? 'Ready to Scan' : 'Pipeline Empty'}</p>
-                <p className="text-xs text-white/40 leading-relaxed font-bold">
-                  {activeGroup.keywords.length > 0 
-                   ? `Click below to scan for ${activeGroup.name} intelligence.` 
-                   : 'Add keywords to this channel to begin scanning for signal updates.'}
-                </p>
-                {activeGroup.keywords.length > 0 && (
-                  <button 
-                    onClick={triggerManualFetch}
-                    className="button-primary mt-8 mb-4 py-5"
-                  >
-                    Start Intelligence Scan
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
+            )}
+          </section>
+          {demoNotice}
+        </div>
       )}
 
       {activeTab === 'explore' && (
@@ -1549,15 +1812,15 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-               <div className={`w-2 h-2 rounded-full ${isGlobalSyncEnabled ? 'bg-accent animate-pulse shadow-[0_0_10px_var(--accent)]' : 'bg-white/10'}`} />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none">{isGlobalSyncEnabled ? 'Live Monitor' : 'Offline'}</span>
+              <div className={`w-2 h-2 rounded-full ${isGlobalSyncEnabled ? 'bg-accent animate-pulse shadow-[0_0_10px_var(--accent)]' : 'bg-white/10'}`} />
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none">{isGlobalSyncEnabled ? 'Live Monitor' : 'Offline'}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
             {(() => {
               const activeTrackers = groups.filter(g => g.notificationsEnabled);
-              
+
               if (activeTrackers.length === 0) {
                 return (
                   <div className="py-12 flex flex-col items-center gap-4 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
@@ -1575,17 +1838,16 @@ export default function Home() {
                 const isOverdue = msRemaining <= 0 && group.refreshInterval > 0 && isGlobalSyncEnabled;
 
                 return (
-                  <motion.div 
+                  <motion.div
                     layout
                     key={group.id}
                     className="card-rich p-4 flex items-center justify-between relative overflow-hidden group/mcard"
                   >
                     <div className="flex items-center gap-3 relative z-10">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500 ${
-                        isOverdue ? 'bg-accent/10 border-accent/30 text-accent animate-pulse' :
-                        isImminent ? 'bg-accent/20 border-accent/40 text-accent animate-pulse' :
-                        'bg-white/5 border-white/10 text-white/20'
-                      }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500 ${isOverdue ? 'bg-accent/10 border-accent/30 text-accent animate-pulse' :
+                          isImminent ? 'bg-accent/20 border-accent/40 text-accent animate-pulse' :
+                            'bg-white/5 border-white/10 text-white/20'
+                        }`}>
                         {(() => {
                           const Icon = getChannelIcon(group.name);
                           return <Icon size={18} className={isImminent || isOverdue ? 'animate-bounce' : ''} />;
@@ -1594,12 +1856,12 @@ export default function Home() {
                       <div className="flex flex-col">
                         <span className="text-xs font-black tracking-tight uppercase italic leading-none">{group.name}</span>
                         <div className="flex items-center gap-2 mt-1">
-                           <span className="text-[9px] font-black text-accent bg-accent/10 px-1.5 py-0.5 rounded-md border border-accent/20 uppercase tracking-tighter">
-                             {group.refreshInterval}M PULSE
-                           </span>
-                           <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest leading-none">
-                             {group.keywords.length} TARGETS • {group.language?.toUpperCase() || 'ALL'}
-                           </span>
+                          <span className="text-[9px] font-black text-accent bg-accent/10 px-1.5 py-0.5 rounded-md border border-accent/20 uppercase tracking-tighter">
+                            {group.refreshInterval}M PULSE
+                          </span>
+                          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest leading-none">
+                            {group.keywords.length} TARGETS • {group.language?.toUpperCase() || 'ALL'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1609,10 +1871,9 @@ export default function Home() {
                         {group.refreshInterval > 0 ? (
                           <>
                             <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Next Scan</span>
-                            <span className={`text-xs font-black tabular-nums tracking-tighter italic leading-none ${
-                              isOverdue ? 'text-accent animate-pulse' : 
-                              isImminent ? 'text-accent animate-pulse' : 'text-white'
-                            }`}>
+                            <span className={`text-xs font-black tabular-nums tracking-tighter italic leading-none ${isOverdue ? 'text-accent animate-pulse' :
+                                isImminent ? 'text-accent animate-pulse' : 'text-white'
+                              }`}>
                               {msRemaining > 0 ? (() => {
                                 const totalSecs = Math.floor(msRemaining / 1000);
                                 const h = Math.floor(totalSecs / 3600);
@@ -1628,9 +1889,10 @@ export default function Home() {
                         )}
                       </div>
 
-                      <button 
+                      <button
                         onClick={async (e) => {
                           e.stopPropagation();
+                          if (!requireAuth()) return;
                           setIsScanningAtId(group.id);
                           await handleFetch(group.keywords.map(k => k.word), group.language, group.country, group.id);
                           setTimeout(() => setIsScanningAtId(null), 2000);
@@ -1647,6 +1909,7 @@ export default function Home() {
               });
             })()}
           </div>
+          {demoNotice}
         </div>
       )}
 
@@ -1657,9 +1920,12 @@ export default function Home() {
               <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Intelligence Logs</h2>
               <span className="text-[9px] font-bold text-white/20 uppercase">Encrypted Signal History</span>
             </div>
-            <button 
-              onClick={() => setShowClearLogsModal(true)}
-              className="text-[10px] font-black text-error/60 hover:text-error transition-all uppercase tracking-widest border border-error/20 px-4 py-2 rounded-xl bg-error/5"
+            <button
+              onClick={() => {
+                if (!requireAuth()) return;
+                setShowClearLogsModal(true);
+              }}
+              className="text-[10px] font-black text-white/55 hover:text-white transition-all uppercase tracking-widest border border-white/15 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10"
             >
               Purge Logs
             </button>
@@ -1671,11 +1937,10 @@ export default function Home() {
               <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
                 <button
                   onClick={() => setLogChannelFilter("all")}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                    logChannelFilter === "all" 
-                      ? "bg-accent text-white shadow-lg shadow-accent/30" 
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${logChannelFilter === "all"
+                      ? "bg-accent text-white shadow-lg shadow-accent/30"
                       : "bg-white/5 text-white/40 hover:bg-white/10"
-                  }`}
+                    }`}
                 >
                   All Channels
                 </button>
@@ -1683,11 +1948,10 @@ export default function Home() {
                   <button
                     key={channel}
                     onClick={() => setLogChannelFilter(channel)}
-                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                      logChannelFilter === channel 
-                        ? "bg-accent text-white shadow-lg shadow-accent/30" 
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${logChannelFilter === channel
+                        ? "bg-accent text-white shadow-lg shadow-accent/30"
                         : "bg-white/5 text-white/40 hover:bg-white/10"
-                    }`}
+                      }`}
                   >
                     {channel}
                   </button>
@@ -1696,8 +1960,8 @@ export default function Home() {
             )}
 
             {(() => {
-              const filtered = logChannelFilter === "all" 
-                ? historyLogs 
+              const filtered = logChannelFilter === "all"
+                ? historyLogs
                 : historyLogs.filter(l => l.channel === logChannelFilter);
 
               if (filtered.length === 0) {
@@ -1715,7 +1979,7 @@ export default function Home() {
               }
 
               return filtered.map((log, idx) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: -15 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true, margin: "-20px" }}
@@ -1732,24 +1996,24 @@ export default function Home() {
                   </div>
                   <div className="relative z-10 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                       <span className="text-[9px] font-black text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 rounded-lg uppercase tracking-widest">{log.channel}</span>
-                       <span className="w-1 h-1 rounded-full bg-white/10" />
-                       <span className="text-[10px] font-black text-white/40 uppercase tracking-tighter">Intelligence:</span>
-                       <span className="text-[12px] font-black text-accent italic uppercase tracking-tight">
-                         {log.title.includes('Intelligence Acquired') ? `+${log.title.match(/\d+/)?.[0] || ''}` : log.title}
-                       </span>
+                      <span className="text-[9px] font-black text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 rounded-lg uppercase tracking-widest">{log.channel}</span>
+                      <span className="w-1 h-1 rounded-full bg-white/10" />
+                      <span className="text-[10px] font-black text-white/40 uppercase tracking-tighter">Intelligence:</span>
+                      <span className="text-[12px] font-black text-accent italic uppercase tracking-tight">
+                        {log.title.includes('Intelligence Acquired') ? `+${log.title.match(/\d+/)?.[0] || ''}` : log.title}
+                      </span>
                     </div>
                     <span className="text-[9px] font-black text-white/50 tabular-nums uppercase">
                       {formatTimeAgo(log.timestamp)}
                     </span>
                   </div>
-                  
+
                   {log.articles && log.articles.length > 0 && (
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-col gap-1.5">
                         {log.articles.slice(0, 3).map((art, i) => (
-                          <div 
-                            key={i} 
+                          <div
+                            key={i}
                             className="flex flex-col gap-0.5 border-l border-white/5 pl-3 py-0.5 transition-all"
                           >
                             <span className="text-[11px] font-bold text-accent/80 line-clamp-1 leading-tight transition-colors">{art.title}</span>
@@ -1760,10 +2024,10 @@ export default function Home() {
                             </div>
                           </div>
                         ))}
-                        
+
                         <div className="mt-2 text-[9px] font-black text-accent/40 group-hover:text-accent italic ml-3 transition-colors uppercase tracking-widest flex items-center gap-2">
-                           <span>{log.articles.length > 3 ? `+${log.articles.length - 3} more signals • ` : ''}Click to expand detection report</span>
-                           <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                          <span>{log.articles.length > 3 ? `+${log.articles.length - 3} more signals • ` : ''}Click to expand detection report</span>
+                          <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </div>
                     </div>
@@ -1772,52 +2036,53 @@ export default function Home() {
               ));
             })()}
           </div>
+          {demoNotice}
         </div>
       )}
 
       {/* Premium Bottom Navigation */}
-      <motion.nav 
+      <motion.nav
         initial={{ y: 0 }}
         animate={{ y: isNavVisible ? 0 : "100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="phone-fixed fixed bottom-0 z-40 bg-[#050507]/90 backdrop-blur-3xl border-t border-white/10 pb-safe pb-3 pt-3 px-6 flex items-center justify-center"
       >
         <div className="flex items-center gap-10">
-           <button 
-             onClick={() => setActiveTab('home')}
-             className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'home' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
-           >
-             <HomeIcon size={20} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
-             <span className="text-[9px] font-black uppercase tracking-widest">Home</span>
-           </button>
-           <button 
-             onClick={() => setActiveTab('explore')}
-             className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'explore' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
-           >
-             <Radio size={20} strokeWidth={activeTab === 'explore' ? 2.5 : 2} />
-             <span className="text-[9px] font-black uppercase tracking-widest">Monitor</span>
-           </button>
-           <button 
-             onClick={() => setActiveTab('account')}
-             className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'account' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
-           >
-             <Terminal size={20} strokeWidth={activeTab === 'account' ? 2.5 : 2} />
-             <span className="text-[9px] font-black uppercase tracking-widest">Logs</span>
-           </button>
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'home' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
+          >
+            <HomeIcon size={20} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Home</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('explore')}
+            className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'explore' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
+          >
+            <Radio size={20} strokeWidth={activeTab === 'explore' ? 2.5 : 2} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Monitor</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('account')}
+            className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'account' ? 'text-accent scale-110 drop-shadow-[0_0_15px_rgba(129,76,255,0.8)]' : 'text-white/40 hover:text-white/70'}`}
+          >
+            <Terminal size={20} strokeWidth={activeTab === 'account' ? 2.5 : 2} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Logs</span>
+          </button>
         </div>
       </motion.nav>
 
       {/* Modern tray Settings */}
       <AnimatePresence>
         {showSettings && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="phone-fixed fixed inset-y-0 z-[60] bg-black/80 backdrop-blur-md flex items-end justify-center p-0"
             onClick={() => setShowSettings(false)}
           >
-            <motion.div 
+            <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -1831,7 +2096,7 @@ export default function Home() {
                   setShowSettings(false);
                 }
               }}
-              className="bg-[#0a0a0c] w-full max-w-[430px] max-h-[calc(100dvh-72px)] rounded-t-[48px] border border-white/10 border-b-0 flex flex-col shadow-2xl"
+              className="theme-config-panel bg-[#0a0a0c] w-full max-w-[430px] max-h-[calc(100dvh-72px)] rounded-t-[48px] border border-white/10 border-b-0 flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               {/* Draggable Handle and Header Area */}
@@ -1842,8 +2107,8 @@ export default function Home() {
                     <h3 className="text-2xl font-black italic uppercase tracking-tighter">System Config</h3>
                     <p className="text-xs text-white/30 hidden">Application control panel</p>
                   </div>
-                  <button 
-                    onClick={() => setShowSettings(false)} 
+                  <button
+                    onClick={() => setShowSettings(false)}
                     onPointerDownCapture={e => e.stopPropagation()} // Exclude from drag
                     className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-all"
                   >
@@ -1853,7 +2118,7 @@ export default function Home() {
               </div>
 
               {/* Scrollable Content Area (Excluded from Drag) */}
-              <div 
+              <div
                 className="px-4 pb-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto no-scrollbar"
                 onPointerDownCapture={e => e.stopPropagation()}
               >
@@ -1862,7 +2127,31 @@ export default function Home() {
                   <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`p-3 rounded-xl ${isStandaloneApp ? 'bg-accent-secondary/20 text-accent-secondary' : 'bg-white/5 text-white/50'}`}>
+                        <div className="theme-icon-box w-11 h-11 rounded-xl flex shrink-0 items-center justify-center bg-white/5 text-white/50">
+                          {themeMode === 'light' ? <Sun size={18} /> : <Moon size={18} />}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm tracking-tight text-white/90">APPEARANCE</span>
+                          <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{themeMode === 'light' ? 'Light Mode' : 'Dark Mode'}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+                        aria-label="Toggle light theme"
+                        className="theme-switch w-12 h-7 rounded-full relative transition-colors duration-300 border bg-white/5 border-white/5"
+                      >
+                        <motion.div
+                          animate={{ x: themeMode === 'light' ? 22 : 4 }}
+                          className={`theme-switch-knob absolute top-1/2 -translate-y-1/2 w-4 h-4 shrink-0 rounded-full shadow-lg ${themeMode === 'light' ? 'bg-white' : 'bg-white/25'}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="theme-icon-box w-11 h-11 rounded-xl flex shrink-0 items-center justify-center bg-white/5 text-white/50">
                           <Download size={18} />
                         </div>
                         <div className="flex flex-col">
@@ -1870,111 +2159,109 @@ export default function Home() {
                           <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{isStandaloneApp ? 'Installed' : deferredInstallPrompt ? 'Ready' : 'Available'}</span>
                         </div>
                       </div>
-                      <button onClick={installApp} className="text-accent text-[10px] font-black uppercase tracking-wider bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled={isStandaloneApp}>
+                      <button onClick={installApp} className="theme-config-action text-white/70 text-[10px] font-black uppercase tracking-wider bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled={isStandaloneApp}>
                         {isStandaloneApp ? 'Done' : 'Install'}
                       </button>
                     </div>
                   </div>
 
                   <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
-                      <div className="flex flex-col gap-3">
-                          <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-3 min-w-0">
-                                  <div className={`p-3 rounded-xl ${notificationHealthy ? 'bg-accent/20 text-accent' : 'bg-white/5 text-muted'}`}>
-                                    {notificationHealthy ? <Bell size={18} /> : <BellOff size={18} />}
-                                  </div>
-                                  <div className="flex min-w-0 flex-col">
-                                    <span className="font-black text-sm tracking-tight text-white/90">ALERTS</span>
-                                    <span className={`text-[9px] font-bold uppercase tracking-widest ${notificationHealthy ? 'text-accent' : 'text-white/40'}`}>{notificationStatusLabel}</span>
-                                  </div>
-                              </div>
-                              <button
-                                onClick={setupAndTestNotifications}
-                                disabled={isNotificationBusy}
-                                className="shrink-0 text-accent text-[10px] font-black uppercase tracking-wider bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white disabled:opacity-40 disabled:cursor-wait transition-all"
-                              >
-                                {isNotificationBusy ? 'Checking' : notificationHealthy ? 'Test' : 'Setup'}
-                              </button>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="theme-icon-box w-11 h-11 rounded-xl flex shrink-0 items-center justify-center bg-white/5 text-white/50">
+                            {notificationHealthy ? <Bell size={18} /> : <BellOff size={18} />}
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            {notificationChecks.map((check) => (
-                              <div
-                                key={check.label}
-                                className={`flex items-center justify-between rounded-lg border px-2.5 py-2 ${
-                                  check.ok
-                                    ? 'bg-accent/10 border-accent/30 text-white'
-                                    : 'bg-black/20 border-white/5 text-white/30'
-                                }`}
-                              >
-                                <span className="text-[9px] font-bold uppercase tracking-widest">{check.label}</span>
-                                <span
-                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                                    check.ok
-                                      ? 'bg-accent text-white border-accent shadow-[0_0_12px_var(--accent)]'
-                                      : 'bg-white/5 text-white/35 border-white/10'
-                                  }`}
-                                >
-                                  {check.ok ? <Check size={12} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
-                                </span>
-                              </div>
-                            ))}
+                          <div className="flex min-w-0 flex-col">
+                            <span className="font-black text-sm tracking-tight text-white/90">ALERTS</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">{notificationStatusLabel}</span>
                           </div>
-                          {(!isStandaloneApp || notificationDiagnostics.permission === 'denied') && (
-                            <div className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-black/20 px-3 py-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">
-                                {notificationDiagnostics.permission === 'denied' ? 'Enable in device settings' : 'PWA improves mobile alerts'}
-                              </span>
-                              {!isStandaloneApp && (
-                                <button
-                                  onClick={installApp}
-                                  className="shrink-0 text-white/70 text-[9px] font-black uppercase tracking-widest bg-white/5 px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-all"
-                                >
-                                  Install
-                                </button>
-                              )}
-                            </div>
-                          )}
+                        </div>
+                        <button
+                          onClick={setupAndTestNotifications}
+                          disabled={isNotificationBusy}
+                          className="theme-config-action shrink-0 text-white/70 text-[10px] font-black uppercase tracking-wider bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:cursor-wait transition-all"
+                        >
+                          {isNotificationBusy ? 'Checking' : notificationHealthy ? 'Test' : 'Setup'}
+                        </button>
                       </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {notificationChecks.map((check) => (
+                          <div
+                            key={check.label}
+                            className={`theme-config-check-item flex items-center justify-between rounded-lg border px-2.5 py-2 ${check.ok
+                                ? 'bg-white/5 border-white/20 text-white/80'
+                                : 'bg-black/20 border-white/5 text-white/30'
+                              }`}
+                          >
+                            <span className="theme-config-check-label text-[9px] font-bold uppercase tracking-widest">{check.label}</span>
+                            <span
+                              className={`theme-config-check-dot flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${check.ok
+                                  ? 'bg-white text-black border-white'
+                                  : 'is-missing bg-white/5 text-white/35 border-white/10'
+                                }`}
+                            >
+                              {check.ok ? <Check size={12} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {(!isStandaloneApp || notificationDiagnostics.permission === 'denied') && (
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-black/20 px-3 py-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">
+                            {notificationDiagnostics.permission === 'denied' ? 'Enable in device settings' : 'PWA improves mobile alerts'}
+                          </span>
+                          {!isStandaloneApp && (
+                            <button
+                              onClick={installApp}
+                              className="shrink-0 text-white/70 text-[9px] font-black uppercase tracking-widest bg-white/5 px-2.5 py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-all"
+                            >
+                              Install
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="card bg-white/5 border-white/5 p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`p-3 rounded-xl transition-colors ${isGlobalSyncEnabled ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/20'}`}>
+                        <div className="theme-icon-box w-11 h-11 rounded-xl flex shrink-0 items-center justify-center bg-white/5 text-white/50">
                           <Volume2 size={18} />
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black text-sm tracking-tight text-white/90">PIPELINE SYNC</span>
-                          <span className={`text-[9px] font-bold uppercase tracking-widest ${canManageGlobalSync && isGlobalSyncEnabled ? 'text-accent' : 'text-white/20'}`}>
-                             {!canManageGlobalSync ? 'Admin Only' : isGlobalSyncEnabled ? (isScanning ? 'Synchronizing Intelligence...' : 'Active') : 'Standby'}
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">
+                            {!canManageGlobalSync ? 'Admin Only' : isGlobalSyncEnabled ? (isScanning ? 'Synchronizing Intelligence...' : 'Active') : 'Standby'}
                           </span>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => toggleGlobalSync(!isGlobalSyncEnabled)}
                         disabled={!canManageGlobalSync}
                         aria-disabled={!canManageGlobalSync}
                         title={canManageGlobalSync ? 'Toggle global pipeline sync' : 'Admin access required'}
-                        className={`w-12 h-7 rounded-full relative transition-all duration-300 ${isGlobalSyncEnabled ? 'bg-accent/40 border-accent/20' : 'bg-white/5 border-white/5'} border ${canManageGlobalSync ? '' : 'opacity-40 cursor-not-allowed'}`}
+                        className={`theme-switch w-12 h-7 rounded-full relative transition-colors duration-300 bg-white/5 border-white/5 border ${isGlobalSyncEnabled ? 'is-on' : ''} ${canManageGlobalSync ? '' : 'opacity-40 cursor-not-allowed'}`}
                       >
-                         <motion.div 
-                           animate={{ x: isGlobalSyncEnabled ? 22 : 4 }}
-                           className={`absolute top-1 w-4 h-4 rounded-full shadow-lg ${isGlobalSyncEnabled ? 'bg-white' : 'bg-white/20'}`} 
-                         />
+                        <motion.div
+                          animate={{ x: isGlobalSyncEnabled ? 22 : 4 }}
+                          className={`theme-switch-knob absolute top-1/2 -translate-y-1/2 w-4 h-4 shrink-0 rounded-full shadow-lg ${isGlobalSyncEnabled ? 'bg-white' : 'bg-white/20'}`}
+                        />
                       </button>
                     </div>
                     <div className="h-1 bg-white/5 rounded-full relative overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         initial={false}
-                        animate={{ 
+                        animate={{
                           x: isScanning ? ["-100%", "100%"] : "-100%"
                         }}
-                        transition={isScanning ? { 
-                          duration: 1.5, 
+                        transition={isScanning ? {
+                          duration: 1.5,
                           repeat: Infinity,
-                          ease: "linear" 
+                          ease: "linear"
                         } : { duration: 0.5 }}
-                        className="h-full w-1/2 bg-accent rounded-full shadow-[0_0_10px_var(--accent)]"
+                        className="theme-config-progress h-full w-1/2 bg-white/60 rounded-full"
                       />
                     </div>
                   </div>
@@ -1983,29 +2270,29 @@ export default function Home() {
                 {/* Column 2: Bulk Actions (Moved inside a single card) */}
                 <div className="card bg-white/5 border-white/5 p-3 flex flex-col justify-between gap-3">
                   <div className="flex flex-col gap-1">
-                      <span className="font-black text-sm tracking-tight text-white/90">BULK ACTIONS</span>
-                      <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Global Automation</span>
+                    <span className="font-black text-sm tracking-tight text-white/90">BULK ACTIONS</span>
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Global Automation</span>
                   </div>
                   <div className="flex flex-col gap-2">
-                      <button 
-                        onClick={() => toggleAllNotifications(true)}
-                        className="w-full bg-white/5 border border-white/20 text-white/80 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-accent/15 hover:border-accent/40 hover:text-accent transition-all uppercase tracking-widest"
-                      >
-                         <Bell size={14} /> Enable All
-                      </button>
-                      <button 
-                         onClick={() => toggleAllNotifications(false)}
-                         className="w-full bg-white/5 border border-white/20 text-white/80 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-error/15 hover:border-error/40 hover:text-error transition-all uppercase tracking-widest"
-                      >
-                         <BellOff size={14} /> Silence All
-                      </button>
+                    <button
+                      onClick={() => toggleAllNotifications(true)}
+                      className="theme-config-bulk-action w-full bg-white/5 border border-white/20 text-white/80 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/30 hover:text-white transition-all uppercase tracking-widest"
+                    >
+                      <Bell size={14} /> Enable All
+                    </button>
+                    <button
+                      onClick={() => toggleAllNotifications(false)}
+                      className="theme-config-bulk-action w-full bg-white/5 border border-white/20 text-white/80 text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/30 hover:text-white transition-all uppercase tracking-widest"
+                    >
+                      <BellOff size={14} /> Silence All
+                    </button>
                   </div>
                 </div>
               </div>
 
               <div className="flex-shrink-0 border-t border-white/5 bg-[#0a0a0c] px-6 pb-6 pt-4">
-                <button 
-                  onClick={() => setShowSettings(false)} 
+                <button
+                  onClick={() => setShowSettings(false)}
                   className="button-primary py-3 text-sm font-black uppercase italic tracking-tighter w-full"
                 >
                   Close
@@ -2017,27 +2304,77 @@ export default function Home() {
       </AnimatePresence>
 
 
+      {/* Demo Authorization Modal */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+            onClick={() => setShowAuthModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-accent/20 p-8 flex flex-col gap-6 text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="relative mx-auto">
+                <div className="absolute -inset-2 rounded-[32px] bg-accent/20 blur-xl" />
+                <div className="relative w-20 h-20 rounded-[32px] bg-accent/10 flex items-center justify-center border border-accent/20 overflow-hidden">
+                  <img src="/icon-192x192.png" alt="Signalertica Logo" className="w-full h-full object-cover" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-black uppercase italic tracking-tighter">Authorize Access</h3>
+                <p className="text-sm text-white/40 leading-relaxed">
+                  You are viewing demo data. Connect Google to create private channels, scan live signals, and receive alerts.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => signIn("google")}
+                  className="button-primary py-4 text-xs font-black uppercase tracking-widest"
+                >
+                  Authorize Google Access
+                </button>
+                <button
+                  onClick={() => setShowAuthModal(false)}
+                  className="w-full bg-white/5 text-white/45 font-black py-4 rounded-xl hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest text-xs"
+                >
+                  Continue Preview
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Logout Confirmation Modal */}
       <AnimatePresence>
         {showLogoutModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
             onClick={() => setShowLogoutModal(false)}
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-error/20 p-8 flex flex-col gap-6"
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-white/10 p-8 flex flex-col gap-6"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-20 h-20 rounded-[32px] bg-error/10 flex items-center justify-center border border-error/20 mx-auto">
-                <X size={40} className="text-error" />
+              <div className="theme-neutral-modal-icon w-20 h-20 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/15 mx-auto">
+                <X size={40} className="text-white/70" />
               </div>
-              
+
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Logout?</h3>
                 <p className="text-sm text-white/40 leading-relaxed">
@@ -2046,15 +2383,15 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <button 
+                <button
                   onClick={() => setShowLogoutModal(false)}
-                  className="py-4 rounded-2xl bg-white/5 text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                  className="theme-neutral-secondary py-4 rounded-2xl bg-white/5 text-white/50 text-xs font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={() => signOut()}
-                  className="py-4 rounded-2xl bg-error text-white text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-error/20"
+                  className="theme-confirm-button theme-neutral-confirm py-4 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/15 transition-all shadow-lg shadow-black/10"
                 >
                   Confirm
                 </button>
@@ -2067,22 +2404,22 @@ export default function Home() {
       {/* Premium Delete Confirmation Modal */}
       <AnimatePresence>
         {groupToDelete && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-error/20 p-8 flex flex-col gap-6"
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-white/10 p-8 flex flex-col gap-6"
             >
-              <div className="w-20 h-20 rounded-[32px] bg-error/10 flex items-center justify-center border border-error/20 mx-auto">
-                <Trash2 size={40} className="text-error" />
+              <div className="theme-neutral-modal-icon w-20 h-20 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/15 mx-auto">
+                <Trash2 size={40} className="text-white/70" />
               </div>
-              
+
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Destroy Channel?</h3>
                 <p className="text-sm text-white/40 leading-relaxed">
@@ -2091,15 +2428,15 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <button 
+                <button
                   onClick={() => setGroupToDelete(null)}
-                  className="py-4 rounded-2xl bg-white/5 text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                  className="theme-neutral-secondary py-4 rounded-2xl bg-white/5 text-white/50 text-xs font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={deleteGroup}
-                  className="py-4 rounded-2xl bg-error text-white text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-error/20"
+                  className="theme-confirm-button theme-neutral-confirm py-4 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/15 transition-all shadow-lg shadow-black/10"
                 >
                   Confirm Delete
                 </button>
@@ -2111,22 +2448,22 @@ export default function Home() {
       {/* Premium Keyword Delete Confirmation Modal */}
       <AnimatePresence>
         {keywordToDelete && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-accent/20 p-8 flex flex-col gap-6"
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-white/10 p-8 flex flex-col gap-6"
             >
-              <div className="w-20 h-20 rounded-[32px] bg-accent/10 flex items-center justify-center border border-accent/20 mx-auto">
-                <Settings size={40} className="text-accent" />
+              <div className="theme-neutral-modal-icon w-20 h-20 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/15 mx-auto">
+                <Settings size={40} className="text-white/70" />
               </div>
-              
+
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Destroy Keyword?</h3>
                 <p className="text-sm text-white/40 leading-relaxed">
@@ -2134,18 +2471,18 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={confirmRemoveKeyword}
-                  className="w-full bg-error text-white font-black py-4 rounded-xl hover:bg-error/80 transition-all uppercase tracking-widest text-xs"
-                >
-                  Confirm Destroy
-                </button>
-                <button 
+              <div className="grid grid-cols-2 gap-3">
+                <button
                   onClick={() => setKeywordToDelete(null)}
-                  className="w-full bg-white/5 text-white/40 font-black py-4 rounded-xl hover:bg-white/10 transition-all uppercase tracking-widest text-xs"
+                  className="theme-neutral-secondary py-4 rounded-2xl bg-white/5 text-white/50 text-xs font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
                 >
                   Abort
+                </button>
+                <button
+                  onClick={confirmRemoveKeyword}
+                  className="theme-confirm-button theme-neutral-confirm py-4 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/15 transition-all shadow-lg shadow-black/10"
+                >
+                  Confirm
                 </button>
               </div>
             </motion.div>
@@ -2156,20 +2493,20 @@ export default function Home() {
       {/* Premium Rename Modal */}
       <AnimatePresence>
         {isRenamingGroupId !== null && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-accent/20 p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(168,85,247,0.1)]"
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-white/10 p-8 flex flex-col gap-6"
             >
-               <div className="w-20 h-20 rounded-[32px] bg-accent/10 flex items-center justify-center border border-accent/20 mx-auto">
-                <Edit2 size={40} className="text-accent" />
+              <div className="theme-neutral-modal-icon w-20 h-20 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/15 mx-auto">
+                <Edit2 size={40} className="text-white/70" />
               </div>
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Rename Channel</h3>
@@ -2179,7 +2516,7 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <input 
+                <input
                   autoFocus
                   type="text"
                   value={editGroupName}
@@ -2188,21 +2525,21 @@ export default function Home() {
                     if (e.key === 'Enter') saveRename(isRenamingGroupId);
                     if (e.key === 'Escape') setIsRenamingGroupId(null);
                   }}
-                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-accent transition-all shadow-inner"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-white/30 transition-all shadow-inner"
                   placeholder="Encryption handle..."
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <button 
+                <button
                   onClick={() => setIsRenamingGroupId(null)}
-                  className="py-4 rounded-2xl bg-white/5 text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                  className="theme-neutral-secondary py-4 rounded-2xl bg-white/5 text-white/50 text-xs font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
                 >
                   Abort
                 </button>
-                <button 
+                <button
                   onClick={() => saveRename(isRenamingGroupId)}
-                  className="py-4 rounded-2xl bg-accent text-white text-xs font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-accent/20 transition-all"
+                  className="theme-confirm-button theme-neutral-confirm py-4 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/15 transition-all shadow-lg shadow-black/10"
                 >
                   Confirm Rename
                 </button>
@@ -2215,20 +2552,20 @@ export default function Home() {
       {/* Logs Clear Confirmation Modal */}
       <AnimatePresence>
         {showClearLogsModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="card max-w-[400px] w-full bg-[#0a0b12] border-error/20 p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(255,51,51,0.1)]"
+              className="card max-w-[400px] w-full bg-gradient-to-br from-[#1a1b26] to-[#0a0b12] border-white/10 p-8 flex flex-col gap-6"
             >
-               <div className="w-20 h-20 rounded-[32px] bg-error/10 flex items-center justify-center border border-error/20 mx-auto">
-                <Trash2 size={40} className="text-error" />
+              <div className="theme-neutral-modal-icon w-20 h-20 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/15 mx-auto">
+                <Trash2 size={40} className="text-white/70" />
               </div>
               <div className="flex flex-col gap-2 text-center">
                 <h3 className="text-xl font-black uppercase italic tracking-tighter">Clear All Logs?</h3>
@@ -2237,23 +2574,23 @@ export default function Home() {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <button 
+                <button
                   onClick={() => setShowClearLogsModal(false)}
-                  className="py-4 rounded-2xl bg-white/5 text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                  className="theme-neutral-secondary py-4 rounded-2xl bg-white/5 text-white/50 text-xs font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
                 >
                   Cancel
                 </button>
-                <button 
-                  onClick={async () => { 
+                <button
+                  onClick={async () => {
                     try {
                       await fetch('/api/logs', { method: 'DELETE' });
-                      setHistoryLogs([]); 
+                      setHistoryLogs([]);
                     } catch (e) {
                       console.error("Failed to clear cloud logs", e);
                     }
-                    setShowClearLogsModal(false); 
+                    setShowClearLogsModal(false);
                   }}
-                  className="py-4 rounded-2xl bg-error text-white text-xs font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-error/20 transition-all"
+                  className="theme-confirm-button theme-neutral-confirm py-4 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/15 transition-all shadow-lg shadow-black/10"
                 >
                   Confirm Clear
                 </button>
@@ -2266,15 +2603,11 @@ export default function Home() {
       {/* Premium Toast Notification System */}
       <AnimatePresence>
         {toast && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className={`fixed bottom-24 left-1/2 z-[250] w-fit max-w-[calc(100vw-48px)] -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center justify-center gap-3 text-center ${
-              toast.type === 'success' ? 'bg-accent/20 border-accent/40 text-accent' : 
-              toast.type === 'error' ? 'bg-error/20 border-error/40 text-error' : 
-              'bg-white/10 border-white/20 text-white'
-            }`}
+            className="theme-toast fixed bottom-24 left-1/2 z-[250] w-fit max-w-[calc(100vw-48px)] -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center justify-center gap-3 text-center bg-white/10 border-white/20 text-white"
           >
             <span className="whitespace-nowrap text-xs font-black uppercase tracking-widest">{toast.message}</span>
           </motion.div>
@@ -2283,60 +2616,65 @@ export default function Home() {
       {/* Log Article Detail Modal */}
       <AnimatePresence>
         {selectedLog && (
-          <motion.div 
-             initial={{ opacity: 0 }}
-             animate={{ opacity: 1 }}
-             exit={{ opacity: 0 }}
-             className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
-             onClick={() => setSelectedLog(null)}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="theme-log-modal-overlay fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
+            onClick={() => setSelectedLog(null)}
           >
-             <motion.div 
-               initial={{ scale: 0.9, opacity: 0, y: 20 }}
-               animate={{ scale: 1, opacity: 1, y: 0 }}
-               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-               className="bg-[#0a0a0c] w-full max-w-[430px] max-h-[80vh] rounded-[48px] border border-white/10 flex flex-col shadow-2xl overflow-hidden"
-               onClick={e => e.stopPropagation()}
-             >
-                <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
-                   <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-3">
-                         <span className="text-[10px] font-black text-accent border border-accent/20 bg-accent/5 px-3 py-1 rounded-lg uppercase tracking-[.2em]">{selectedLog.channel}</span>
-                         <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">{formatTimeAgo(selectedLog.timestamp)}</span>
-                      </div>
-                      <h3 className="text-lg font-black italic uppercase tracking-tighter mt-1">
-                        {selectedLog.title.includes('Intelligence Acquired') ? `+${selectedLog.title.match(/\d+/)?.[0] || ''}` : selectedLog.title} ARTICLES RECOVERED
-                      </h3>
-                   </div>
-                   <button 
-                     onClick={() => setSelectedLog(null)}
-                     className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-white/5"
-                   >
-                     <X size={20} />
-                   </button>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="theme-log-modal bg-[#0a0a0c] w-full max-w-[430px] max-h-[80vh] rounded-[48px] border border-white/10 flex flex-col shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    <span className="theme-log-chip text-[10px] font-black text-white/70 border border-white/15 bg-white/5 px-3 py-1 rounded-lg uppercase tracking-[.2em]">{selectedLog.channel}</span>
+                    <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">{formatTimeAgo(selectedLog.timestamp)}</span>
+                  </div>
+                  <h3 className="text-lg font-black italic uppercase tracking-tighter mt-1">
+                    {selectedLog.title.includes('Intelligence Acquired') ? `+${selectedLog.title.match(/\d+/)?.[0] || ''}` : selectedLog.title} ARTICLES RECOVERED
+                  </h3>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto p-6 pt-4 flex flex-col gap-3 no-scrollbar">
-                   {selectedLog.articles?.map((article, i) => (
-                      <motion.div 
-                         initial={{ opacity: 0, x: -10 }}
-                         animate={{ opacity: 1, x: 0 }}
-                         transition={{ delay: i * 0.05 }}
-                         key={article.id}
-                         className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-accent/40 hover:bg-accent/5 transition-all group/art cursor-pointer"
-                         onClick={() => window.open(article.url, '_blank')}
-                      >
-                         <div className="flex items-center gap-3 text-[9px] font-black text-white/40 uppercase tracking-widest">
-                            <span>{article.source}</span>
-                            <span className="w-1 h-1 rounded-full bg-white/10" />
-                            <span className="text-white/40">{formatTimeAgo(article.publishedAt)}</span>
-                         </div>
-                         <h4 className="text-[13px] font-bold text-accent group-hover/art:text-white leading-snug transition-colors">{article.title}</h4>
-                      </motion.div>
-                   ))}
-                </div>
-                
-                <div className="p-8 pt-0 mt-4 h-2 bg-gradient-to-t from-[#0a0a0c] to-transparent pointer-events-none" />
-             </motion.div>
+                <button
+                  onClick={() => setSelectedLog(null)}
+                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-white/5"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 pt-4 flex flex-col gap-3 no-scrollbar">
+                {selectedLog.articles?.map((article, i) => (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    key={article.id}
+                    className="theme-log-article flex flex-col gap-1.5 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all group/art cursor-pointer"
+                    onClick={() => {
+                      if (isDemoMode) {
+                        setShowAuthModal(true);
+                        return;
+                      }
+                      window.open(article.url, '_blank');
+                    }}
+                  >
+                    <div className="flex items-center gap-3 text-[9px] font-black text-white/40 uppercase tracking-widest">
+                      <span>{article.source}</span>
+                      <span className="w-1 h-1 rounded-full bg-white/10" />
+                      <span className="text-white/40">{formatTimeAgo(article.publishedAt)}</span>
+                    </div>
+                    <h4 className="theme-log-article-title text-[13px] font-bold text-white/80 group-hover/art:text-white leading-snug transition-colors">{article.title}</h4>
+                  </motion.div>
+                ))}
+              </div>
+
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

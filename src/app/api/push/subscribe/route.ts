@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     if (rateLimited) return rateLimited;
 
     const subscription = await readJsonRecord(req);
-    
+
     if (!subscription || !isRecord(subscription.keys)) {
       return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 });
     }
@@ -37,12 +37,15 @@ export async function POST(req: Request) {
     });
 
     if (existing) {
-      // If the subscription is registered to a different user, update the owner
-      if (existing.userId !== session.user.id) {
-        await db.update(pushSubscriptions)
-          .set({ userId: session.user.id })
-          .where(eq(pushSubscriptions.id, existing.id));
-      }
+      // Refresh ownership/keys/timestamp so active devices are not treated as stale.
+      await db.update(pushSubscriptions)
+        .set({
+          userId: session.user.id,
+          p256dh,
+          auth,
+          createdAt: new Date(),
+        })
+        .where(eq(pushSubscriptions.id, existing.id));
       return NextResponse.json({ success: true, message: 'Already subscribed' });
     }
 
