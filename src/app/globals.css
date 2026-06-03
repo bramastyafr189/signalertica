@@ -1001,3 +1001,10 @@ main {
   color: #111827 !important;
   -webkit-text-fill-color: #111827 !important;
 }
+
+.theme-light .app-shell span.theme-log-count-accent,
+.theme-light .app-shell span.theme-log-count-accent[class*="text-accent"],
+.theme-light .app-shell .theme-log-count-accent[class*="text-accent"] {
+  color: var(--accent) !important;
+  -webkit-text-fill-color: var(--accent) !important;
+}

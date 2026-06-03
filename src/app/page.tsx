@@ -432,7 +432,7 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [logChannelFilter, setLogChannelFilter] = useState<string>("all");
-  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customIntervalGroupId, setCustomIntervalGroupId] = useState<number | null>(null);
   const [isRenamingGroupId, setIsRenamingGroupId] = useState<number | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [showActionMenu, setShowActionMenu] = useState(false);
@@ -863,6 +863,9 @@ export default function Home() {
   };
 
   const activeGroup = groups.find(g => g.id === activeGroupId);
+  const isCustomMode = activeGroup
+    ? customIntervalGroupId === activeGroup.id || !INTERVAL_OPTIONS.some(option => option.value === activeGroup.refreshInterval)
+    : false;
   const uniqueSources = Array.from(new Set(news.map(n => n.source))).filter(Boolean).sort();
   const filteredNews = sourceFilter === "all" ? news : news.filter(n => n.source === sourceFilter);
   const notificationHealthy = notificationDiagnostics.supported
@@ -1458,7 +1461,7 @@ export default function Home() {
                           <span>{LANGUAGES.find(l => l.code === (activeGroup.language || 'any'))?.name}</span>
                         </div>
                       </div>
-                      <h3 className="text-2xl font-black uppercase tracking-tighter italic break-words leading-tight">{activeGroup.name}</h3>
+                      <h3 className="text-xl font-black uppercase tracking-tighter italic break-words leading-tight">{activeGroup.name}</h3>
                     </div>
                     <div className="relative flex-shrink-0">
                       <button
@@ -1517,8 +1520,8 @@ export default function Home() {
                   <div className="grid grid-cols-1 gap-4 bg-white/5 p-4 rounded-[28px] border border-white/5">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Auto Alerts</span>
-                        <span className="text-xs font-bold text-white uppercase">{activeGroup.notificationsEnabled ? 'Active' : 'Muted'}</span>
+                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Auto Alerts</span>
+                        <span className="text-[11px] font-bold text-white uppercase">{activeGroup.notificationsEnabled ? 'Active' : 'Muted'}</span>
                       </div>
                       <button
                         onClick={() => updateGroupSetting(activeGroup.id, { notificationsEnabled: !activeGroup.notificationsEnabled })}
@@ -1532,8 +1535,8 @@ export default function Home() {
                     </div>
                     <div className="flex items-center justify-between ">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Interval</span>
-                        <span className="text-xs font-bold text-white uppercase">
+                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Interval</span>
+                        <span className="text-[11px] font-bold text-white uppercase">
                           {INTERVAL_OPTIONS.find(o => o.value === activeGroup.refreshInterval)?.label || `${activeGroup.refreshInterval} Mins`}
                         </span>
                       </div>
@@ -1544,13 +1547,13 @@ export default function Home() {
                             onChange={(e) => {
                               const val = e.target.value;
                               if (val === "custom") {
-                                setIsCustomMode(true);
+                                setCustomIntervalGroupId(activeGroup.id);
                               } else {
-                                setIsCustomMode(false);
+                                setCustomIntervalGroupId(currentId => currentId === activeGroup.id ? null : currentId);
                                 updateGroupSetting(activeGroup.id, { refreshInterval: parseInt(val) });
                               }
                             }}
-                            className="bg-black/40 border border-white/10 rounded-xl pl-3 pr-10 h-8 text-[10px] font-black text-white outline-none cursor-pointer appearance-none hover:border-white/20 transition-all flex items-center"
+                            className="bg-black/40 border border-white/10 rounded-xl pl-3 pr-10 h-8 text-[9px] font-black text-white outline-none cursor-pointer appearance-none hover:border-white/20 transition-all flex items-center"
                           >
                             {INTERVAL_OPTIONS.map(opt => (
                               <option key={opt.value} value={opt.value} className="bg-[#121214]">{opt.label}</option>
@@ -1567,7 +1570,7 @@ export default function Home() {
                             placeholder="Mins"
                             value={activeGroup.refreshInterval === 0 ? '' : activeGroup.refreshInterval}
                             onChange={(e) => updateGroupSetting(activeGroup.id, { refreshInterval: parseInt(e.target.value) || 0 })}
-                            className="w-16 h-8 bg-black/40 border border-white/10 rounded-xl px-2 text-[10px] font-black text-white outline-none focus:border-accent"
+                            className="w-16 h-8 bg-black/40 border border-white/10 rounded-xl px-2 text-[9px] font-black text-white outline-none focus:border-accent"
                           />
                         )}
                       </div>
@@ -1581,13 +1584,13 @@ export default function Home() {
                       className="bg-accent/5 border border-accent/20 p-4 rounded-2xl flex items-start gap-3 -mt-4"
                     >
                       <Settings size={16} className="text-accent mt-0.5" />
-                      <p className="text-[10px] font-bold text-accent/80 leading-relaxed uppercase tracking-wider">
+                      <p className="text-[9px] font-bold text-accent/80 leading-relaxed uppercase tracking-wider">
                         Note: Alerts are enabled but Interval is Manual. Signalertica will only notify you when you trigger a manual scan.
                       </p>
                     </motion.div>
                   )}
 
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3">
                     <div className="flex gap-3">
                       <input
                         type="text"
@@ -1595,25 +1598,25 @@ export default function Home() {
                         onChange={(e) => setNewKeyword(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
                         placeholder="E.g. Iran, Gold, Nvidia..."
-                        className="input-field h-14 flex-1 bg-black/40 border-white/5 px-4"
+                        className="input-field h-12 flex-1 bg-black/40 border-white/5 px-4 text-[12px]"
                       />
-                      <button onClick={addKeyword} className="w-14 h-14 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
-                        <Plus size={28} />
+                      <button onClick={addKeyword} className="w-12 h-12 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
+                        <Plus size={24} />
                       </button>
                     </div>
 
                     {activeGroup.keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2.5">
                         {activeGroup.keywords.map(kw => (
                           <motion.div
                             layout
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             key={kw.id}
-                            className="bg-white/5 border border-white/20 rounded-2xl px-5 py-2.5 flex items-center gap-3 transition-colors hover:border-white/30"
+                            className="bg-white/5 border border-white/20 rounded-2xl px-4 py-2 flex items-center gap-2.5 transition-colors hover:border-white/30"
                           >
-                            <span className="text-xs font-black text-white/80 tracking-tight break-all">{kw.word.toUpperCase()}</span>
-                            <X size={16} className="text-white/45 cursor-pointer hover:text-white flex-shrink-0" onClick={() => removeKeyword(kw.id, kw.word)} />
+                            <span className="text-[11px] font-black text-white/80 tracking-tight break-all">{kw.word.toUpperCase()}</span>
+                            <X size={14} className="text-white/45 cursor-pointer hover:text-white flex-shrink-0" onClick={() => removeKeyword(kw.id, kw.word)} />
                           </motion.div>
                         ))}
                       </div>
@@ -1624,12 +1627,12 @@ export default function Home() {
                     }`}>
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col gap-2">
-                        <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Source Localization</span>
+                        <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Source Localization</span>
                         <div className="relative">
                           <select
                             value={activeGroup.language || 'any'}
                             onChange={(e) => updateGroupSetting(activeGroup.id, { language: e.target.value === 'any' ? null : e.target.value })}
-                            className="bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-xs font-black text-white outline-none cursor-pointer hover:border-accent transition-all min-w-[180px] shadow-inner appearance-none"
+                            className="bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-[11px] font-black text-white outline-none cursor-pointer hover:border-accent transition-all min-w-[180px] shadow-inner appearance-none"
                           >
                             {LANGUAGES.map(l => (
                               <option key={l.code} value={l.code} className="bg-[#121214]">{l.flag} {l.name}</option>
@@ -1644,8 +1647,8 @@ export default function Home() {
                         onClick={triggerManualFetch}
                         className="button-primary flex items-center gap-4 group/btn py-3 px-6 shadow-2xl"
                       >
-                        <Search size={22} className="group-hover/btn:rotate-12 transition-transform" />
-                        <span className="text-xs uppercase tracking-[0.2em] font-black italic">Scan Pipeline</span>
+                        <Search size={20} className="group-hover/btn:rotate-12 transition-transform" />
+                        <span className="text-[11px] uppercase tracking-[0.2em] font-black italic">Scan Pipeline</span>
                       </button>
                     )}
                   </div>
@@ -1668,11 +1671,16 @@ export default function Home() {
             </div>
 
             {!activeGroup ? (
-              <div className="py-20 flex flex-col items-center gap-6 text-center">
-                <div className="w-24 h-24 rounded-[32px] bg-white/5 flex items-center justify-center border border-white/10 animate-pulse">
-                  <Radar size={40} className="text-white/10" />
+              <div className="py-10 px-6 flex flex-col items-center gap-4 text-center bg-white/5 rounded-[32px] border border-dashed border-white/10">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                  <Radar size={32} strokeWidth={1.4} className="text-white/15" />
                 </div>
-                <p className="text-sm text-white/30 max-w-[200px] leading-relaxed">Select or create a channel to begin scanning data.</p>
+                <div className="flex flex-col gap-2">
+                  <p className="text-[16px] font-black uppercase italic tracking-tighter">No channel selected</p>
+                  <p className="text-[11px] text-white/35 max-w-[260px] leading-relaxed font-bold uppercase tracking-widest">
+                    Select or create a channel to begin scanning data.
+                  </p>
+                </div>
               </div>
             ) : loading ? (
               <div className="py-20 flex flex-col items-center gap-8 text-center">
@@ -1735,16 +1743,16 @@ export default function Home() {
                         window.open(article.url, '_blank');
                       }}
                     >
-                      <div className="flex-1 flex flex-col gap-2 min-w-0 z-10">
-                        <div className="flex items-center flex-wrap gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest leading-none">
-                          <Clock size={12} className="text-accent/60 flex-shrink-0" />
+                      <div className="flex-1 flex flex-col gap-1.5 min-w-0 z-10">
+                        <div className="flex items-center flex-wrap gap-2 text-[8px] font-bold text-white/40 uppercase tracking-widest leading-none">
+                          <Clock size={10} className="text-accent/60 flex-shrink-0" />
                           <span>{formatTime(article.publishedAt)}</span>
                           <span className="w-1 h-1 rounded-full bg-white/20" />
                           <span className="text-white/80">{article.source}</span>
                         </div>
-                        <h3 className="text-[17px] font-black leading-[1.2] tracking-tight group-hover:text-accent transition-colors">{article.title}</h3>
+                        <h3 className="text-[14px] font-black leading-[1.18] tracking-tight group-hover:text-accent transition-colors">{article.title}</h3>
                         {article.description && (
-                          <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">{article.description}</p>
+                          <p className="text-[11px] text-white/50 line-clamp-2 leading-relaxed">{article.description}</p>
                         )}
                       </div>
 
@@ -1770,19 +1778,19 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="py-24 px-8 flex flex-col items-center gap-8 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
-                <Radar size={60} strokeWidth={1} className="text-white/10" />
-                <div className="flex flex-col gap-4 max-w-[280px]">
-                  <p className="text-xl font-black tracking-tight uppercase italic">{activeGroup.keywords.length > 0 ? 'Ready to Scan' : 'Pipeline Empty'}</p>
-                  <p className="text-xs text-white/40 leading-relaxed font-bold">
+              <div className="py-12 px-6 flex flex-col items-center gap-5 text-center bg-white/5 rounded-[36px] border border-dashed border-white/10">
+                <Radar size={44} strokeWidth={1.2} className="text-white/12" />
+                <div className="flex flex-col gap-3 max-w-[280px]">
+                  <p className="text-[16px] font-black tracking-tight uppercase italic">{activeGroup.keywords.length > 0 ? 'Ready to Scan' : 'Pipeline Empty'}</p>
+                  <p className="text-[11px] text-white/40 leading-relaxed font-bold">
                     {activeGroup.keywords.length > 0
-                      ? `Click below to scan for ${activeGroup.name} intelligence.`
+                      ? `Manual scan previews keyword results. Auto alerts follow the interval configured above.`
                       : 'Add keywords to this channel to begin scanning for signal updates.'}
                   </p>
                   {activeGroup.keywords.length > 0 && (
                     <button
                       onClick={triggerManualFetch}
-                      className="button-primary mt-8 mb-4 py-5"
+                      className="button-primary mt-3 py-3.5 px-6 text-[12px]"
                     >
                       Start Intelligence Scan
                     </button>
@@ -1823,9 +1831,16 @@ export default function Home() {
 
               if (activeTrackers.length === 0) {
                 return (
-                  <div className="py-12 flex flex-col items-center gap-4 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
-                    <Radar size={60} strokeWidth={1} className="text-white/10" />
-                    <p className="text-sm text-white/30 max-w-[200px] leading-relaxed font-bold uppercase tracking-widest leading-relaxed">No active signals found. Enable Auto-Alerts on a channel to begin monitoring.</p>
+                  <div className="py-10 px-6 flex flex-col items-center gap-4 text-center bg-white/5 rounded-[32px] border border-dashed border-white/10">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                      <Radar size={32} strokeWidth={1.4} className="text-white/15" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[16px] font-black uppercase italic tracking-tighter">No active signals</p>
+                      <p className="text-[11px] text-white/35 max-w-[260px] font-bold uppercase tracking-widest leading-relaxed">
+                        Enable Auto-Alerts on a channel to begin monitoring.
+                      </p>
+                    </div>
                   </div>
                 );
               }
@@ -1966,11 +1981,13 @@ export default function Home() {
 
               if (filtered.length === 0) {
                 return (
-                  <div className="py-16 flex flex-col items-center gap-4 text-center bg-white/5 rounded-[48px] border border-dashed border-white/10">
-                    <Terminal size={60} strokeWidth={1} className="text-white/10" />
+                  <div className="py-10 px-6 flex flex-col items-center gap-4 text-center bg-white/5 rounded-[32px] border border-dashed border-white/10">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                      <Terminal size={32} strokeWidth={1.4} className="text-white/15" />
+                    </div>
                     <div className="flex flex-col gap-2">
-                      <p className="text-xl font-black uppercase italic tracking-tighter">No signals found</p>
-                      <p className="text-xs text-white/20 max-w-[200px] leading-relaxed font-bold uppercase tracking-widest">
+                      <p className="text-[16px] font-black uppercase italic tracking-tighter">No signals found</p>
+                      <p className="text-[11px] text-white/35 max-w-[260px] leading-relaxed font-bold uppercase tracking-widest">
                         {logChannelFilter === "all" ? "Target acquisitions will be recorded here." : `No logs found for channel "${logChannelFilter}".`}
                       </p>
                     </div>
@@ -1999,7 +2016,7 @@ export default function Home() {
                       <span className="text-[9px] font-black text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 rounded-lg uppercase tracking-widest">{log.channel}</span>
                       <span className="w-1 h-1 rounded-full bg-white/10" />
                       <span className="text-[10px] font-black text-white/40 uppercase tracking-tighter">Intelligence:</span>
-                      <span className="text-[12px] font-black text-accent italic uppercase tracking-tight">
+                      <span className="theme-log-count-accent text-[12px] font-black text-accent italic uppercase tracking-tight">
                         {log.title.includes('Intelligence Acquired') ? `+${log.title.match(/\d+/)?.[0] || ''}` : log.title}
                       </span>
                     </div>
@@ -2025,10 +2042,13 @@ export default function Home() {
                           </div>
                         ))}
 
-                        <div className="mt-2 text-[9px] font-black text-accent/40 group-hover:text-accent italic ml-3 transition-colors uppercase tracking-widest flex items-center gap-2">
-                          <span>{log.articles.length > 3 ? `+${log.articles.length - 3} more signals • ` : ''}Click to expand detection report</span>
-                          <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                        </div>
+                        {log.articles.length > 3 && (
+                          <div className="mt-2 ml-3 flex items-center">
+                            <span className="theme-log-count-accent text-[9px] font-black text-accent italic uppercase tracking-widest">
+                              +{log.articles.length - 3} more signals
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2637,7 +2657,10 @@ export default function Home() {
                     <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">{formatTimeAgo(selectedLog.timestamp)}</span>
                   </div>
                   <h3 className="text-lg font-black italic uppercase tracking-tighter mt-1">
-                    {selectedLog.title.includes('Intelligence Acquired') ? `+${selectedLog.title.match(/\d+/)?.[0] || ''}` : selectedLog.title} ARTICLES RECOVERED
+                    <span className="theme-log-count-accent text-accent">
+                      {selectedLog.title.includes('Intelligence Acquired') ? `+${selectedLog.title.match(/\d+/)?.[0] || ''}` : selectedLog.title}
+                    </span>{" "}
+                    ARTICLES RECOVERED
                   </h3>
                 </div>
                 <button
