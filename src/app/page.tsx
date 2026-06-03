@@ -1480,7 +1480,7 @@ export default function Home() {
                               initial={{ opacity: 0, scale: 0.9, y: -10, x: 10 }}
                               animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
                               exit={{ opacity: 0, scale: 0.9, y: -10, x: 10 }}
-                              className="absolute right-0 top-14 w-48 bg-[#1a1b26]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden flex flex-col p-1.5"
+                              className="absolute right-0 top-14 w-48 bg-[#1a1b26]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden flex flex-col p-2"
                             >
                               <button
                                 onClick={() => {
@@ -1489,19 +1489,19 @@ export default function Home() {
                                   setEditGroupName(activeGroup.name);
                                   setIsRenamingGroupId(activeGroup.id);
                                 }}
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-xs font-bold text-white/70 hover:text-white transition-all text-left"
+                                className="flex items-center gap-3 px-3 py-3 rounded-none text-xs font-bold text-white/70 hover:text-white transition-all text-left"
                               >
                                 <Edit2 size={16} className="text-white/55" />
                                 <span>Rename Channel</span>
                               </button>
-                              <div className="h-px bg-white/5 mx-2 my-1" />
+                              <div className="h-px bg-white/10 mx-3 my-1" />
                               <button
                                 onClick={() => {
                                   if (!requireAuth()) return;
                                   setShowActionMenu(false);
                                   setGroupToDelete(activeGroup.id);
                                 }}
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-xs font-bold text-white/50 hover:text-white transition-all text-left"
+                                className="flex items-center gap-3 px-3 py-3 rounded-none text-xs font-bold text-white/50 hover:text-white transition-all text-left"
                               >
                                 <Trash2 size={16} className="text-white/45" />
                                 <span>Delete Channel</span>
@@ -1594,10 +1594,10 @@ export default function Home() {
                         value={newKeyword}
                         onChange={(e) => setNewKeyword(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
-                        placeholder="Focus area..."
-                        className="input-field flex-1 bg-black/40 border-white/5 py-3 px-4"
+                        placeholder="E.g. Iran, Gold, Nvidia..."
+                        className="input-field h-14 flex-1 bg-black/40 border-white/5 px-4"
                       />
-                      <button onClick={addKeyword} className="w-12 h-12 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
+                      <button onClick={addKeyword} className="w-14 h-14 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
                         <Plus size={28} />
                       </button>
                     </div>
