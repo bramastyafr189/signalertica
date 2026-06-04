@@ -1396,12 +1396,20 @@ export default function Home() {
                   initial={{ opacity: 0, scale: 0.9, y: -20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                  className="card-rich p-4 border-accent/20"
+                  className="card-rich p-4 border-white/10"
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-white/40">New Channel</h3>
-                      <X size={18} className="text-white/20 cursor-pointer hover:text-white" onClick={() => setIsCreatingGroup(false)} />
+                      <div className="badge bg-white/10 text-white/60 border border-white/5">
+                        New Channel
+                      </div>
+                      <button
+                        onClick={() => setIsCreatingGroup(false)}
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center bg-white/5 border border-white/5 text-white/35 hover:bg-white/10 hover:text-white transition-all"
+                        aria-label="Close new channel"
+                      >
+                        <X size={18} />
+                      </button>
                     </div>
                     <div className="flex flex-col gap-3">
                       <input
@@ -1410,14 +1418,14 @@ export default function Home() {
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
                         placeholder="E.g. Middle East War, Crypto..."
-                        className="input-field py-3 px-4 text-sm"
+                        className="input-field compact-field h-12 px-4"
                       />
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
+                      <div className="grid grid-cols-[minmax(0,1fr)_minmax(150px,0.72fr)] items-stretch gap-2">
+                        <div className="relative w-full">
                           <select
                             value={newGroupLang}
                             onChange={(e) => setNewGroupLang(e.target.value)}
-                            className="input-field py-3 pr-10 text-xs appearance-none cursor-pointer"
+                            className="bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-[11px] font-black text-white outline-none cursor-pointer hover:border-accent transition-all w-full shadow-inner appearance-none"
                           >
                             {LANGUAGES.map(l => (
                               <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
@@ -1425,8 +1433,8 @@ export default function Home() {
                           </select>
                           <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
                         </div>
-                        <button onClick={createGroup} className="button-primary py-3 px-4 text-xs font-black uppercase">
-                          Initialize
+                        <button onClick={createGroup} className="button-primary flex items-center justify-center gap-4 py-3 px-4 shadow-2xl">
+                          <span className="text-[11px] uppercase tracking-[0.2em] font-black italic">Initialize</span>
                         </button>
                       </div>
                     </div>
@@ -1598,7 +1606,7 @@ export default function Home() {
                         onChange={(e) => setNewKeyword(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
                         placeholder="E.g. Iran, Gold, Nvidia..."
-                        className="input-field h-12 flex-1 bg-black/40 border-white/5 px-4 text-[12px]"
+                        className="input-field compact-field h-12 flex-1 bg-black/40 border-white/5 px-4"
                       />
                       <button onClick={addKeyword} className="w-12 h-12 rounded-2xl bg-white/10 flex-shrink-0 flex items-center justify-center hover:bg-white/20 transition-all border border-white/5">
                         <Plus size={24} />
