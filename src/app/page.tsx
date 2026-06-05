@@ -426,6 +426,10 @@ export default function Home() {
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [historyLogs, setHistoryLogs] = useState<AppNotification[]>(DEMO_LOGS);
   const [tickerTime, setTickerTime] = useState(0);
+  const [isPageVisible, setIsPageVisible] = useState(() => {
+    if (typeof document === 'undefined') return true;
+    return document.visibilityState === 'visible';
+  });
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutTrigger, setShowLogoutTrigger] = useState(false);
@@ -602,7 +606,16 @@ export default function Home() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Initialize logs & channels from DB, then periodic refresh
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(document.visibilityState === 'visible');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Initialize logs & channels from DB once after login.
   useEffect(() => {
     if (!session) return;
     const init = async () => {
@@ -634,24 +647,68 @@ export default function Home() {
       }
     };
     init();
+  }, [session, subscribeToPushNotifications]);
 
-    // 4. Set up light background refresh (every 45s) for state sync
-    const syncInterval = setInterval(async () => {
-      if (activeTab === 'home' || activeTab === 'explore') {
-        try {
-          const res = await fetch('/api/interests');
-          if (res.ok) {
-            const data = await res.json();
-            setGroups(data);
-          }
-        } catch {
-          // Best-effort UI state sync.
+  // Lightweight UI sync only while the app is visible. Alerts still come from server cron + Web Push.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
+    const refreshInterests = async () => {
+      if (cancelled || !isPageVisible) return;
+      try {
+        const res = await fetch('/api/interests');
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setGroups(data);
         }
+      } catch {
+        // Best-effort UI state sync.
       }
-    }, 45000);
+    };
 
-    return () => clearInterval(syncInterval);
-  }, [activeTab, session, subscribeToPushNotifications]);
+    const refreshLogs = async () => {
+      if (cancelled || !isPageVisible) return;
+      try {
+        const res = await fetch('/api/logs');
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setHistoryLogs(data);
+        }
+      } catch {
+        // Best-effort log refresh.
+      }
+    };
+
+    const refreshCurrentTab = () => {
+      if (activeTab === 'account') {
+        void refreshLogs();
+      } else if (activeTab === 'explore' || activeTab === 'home') {
+        void refreshInterests();
+      }
+    };
+
+    if (!isPageVisible) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    refreshCurrentTab();
+
+    const intervalMs = activeTab === 'explore'
+      ? 60_000
+      : activeTab === 'home'
+        ? 120_000
+        : null;
+
+    const syncInterval = intervalMs ? window.setInterval(refreshInterests, intervalMs) : null;
+
+    return () => {
+      cancelled = true;
+      if (syncInterval) window.clearInterval(syncInterval);
+    };
+  }, [activeTab, isPageVisible, session]);
 
   // Handle Deep Linking from Notifications
   useEffect(() => {
@@ -679,13 +736,15 @@ export default function Home() {
     });
   }, [historyLogs]); // Re-run when logs are loaded to handle the logId deep link
 
-  // Real-time ticker for countdown precision
+  // Real-time ticker for countdown precision only while Monitor is visible.
   useEffect(() => {
-    const timer = setInterval(() => {
+    if (activeTab !== 'explore' || !isPageVisible) return;
+
+    const timer = window.setInterval(() => {
       setTickerTime(Date.now());
     }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    return () => window.clearInterval(timer);
+  }, [activeTab, isPageVisible]);
 
   const isAnyModalOpen = !!(
     selectedLog ||
